@@ -11,14 +11,16 @@ public struct GroundingValidator: Sendable {
     _ generatedText: String,
     in sourceText: String
   ) -> Bool {
-    let generated = generatedText.normalizedContentWords
+    let trimmedGeneratedText = generatedText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedGeneratedText.isEmpty else { return false }
+    if sourceText.localizedCaseInsensitiveContains(trimmedGeneratedText) {
+      return true
+    }
+
+    let generated = trimmedGeneratedText.normalizedContentWords
     let source = Set(sourceText.normalizedContentWords)
 
     guard !generated.isEmpty, !source.isEmpty else { return false }
-
-    if sourceText.localizedCaseInsensitiveContains(generatedText.trimmingCharacters(in: .whitespacesAndNewlines)) {
-      return true
-    }
 
     let overlap = generated.filter { source.contains($0) }.count
     return Double(overlap) / Double(generated.count) >= minimumContentWordOverlap

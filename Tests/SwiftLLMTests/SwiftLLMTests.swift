@@ -133,6 +133,14 @@ struct SwiftLLMTests {
   }
 
   @Test
+  func groundingValidatorAcceptsExactShortEvidenceButRejectsEmptyClaims() {
+    let validator = GroundingValidator()
+
+    #expect(validator.isGrounded("Q2", in: "The Q2 roadmap is ready for review."))
+    #expect(!validator.isGrounded("   ", in: "The Q2 roadmap is ready for review."))
+  }
+
+  @Test
   func promptEvaluatorChecksRequiredAndForbiddenText() {
     let evaluator = PromptEvaluator()
     let result = evaluator.evaluate(
@@ -322,6 +330,26 @@ struct SwiftLLMTests {
         .topP,
       ]
     )
+  }
+
+  @Test
+  func llmMessageDecodingDefaultsToolFieldsForPersistedMessages() throws {
+    let data = Data(
+      """
+      {
+        "role": "assistant",
+        "content": "Older persisted response."
+      }
+      """.utf8
+    )
+
+    let message = try JSONDecoder().decode(LLMMessage.self, from: data)
+
+    #expect(message.role == .assistant)
+    #expect(message.content == "Older persisted response.")
+    #expect(message.toolCalls.isEmpty)
+    #expect(message.toolCallID == nil)
+    #expect(message.toolResultIsError == false)
   }
 
   @Test
@@ -676,6 +704,38 @@ struct SwiftLLMTests {
     #expect(result.snippets.map(\.sourceID) == ["required"])
     #expect(result.snippets.first?.isRequired == true)
     #expect(result.sources.map(\.id) == ["required"])
+  }
+
+  @Test
+  func keywordLocalRetrieverPrioritizesRequiredSourcesBeforeOptionalMatches() async throws {
+    let retriever = KeywordLocalRetriever(
+      documents: [
+        RetrievableDocument(
+          id: "optional",
+          text: "meeting meeting meeting launch plan",
+          displayName: "Optional note",
+          kind: "note"
+        ),
+        RetrievableDocument(
+          id: "required",
+          text: "Policy note that should remain visible.",
+          displayName: "Policy note",
+          kind: "note"
+        ),
+      ],
+      maxTokensPerSnippet: 32
+    )
+
+    let result = try await retriever.retrieve(
+      LocalRetrievalQuery(
+        text: "meeting",
+        maxResults: 1,
+        requiredSourceIDs: ["required"]
+      )
+    )
+
+    #expect(result.snippets.map(\.sourceID) == ["required"])
+    #expect(result.snippets.first?.isRequired == true)
   }
 
   @Test

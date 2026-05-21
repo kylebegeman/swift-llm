@@ -152,6 +152,39 @@ public struct LLMMessage: Codable, Equatable, Sendable {
   public static func user(_ content: String) -> Self {
     Self(role: .user, content: content)
   }
+
+  enum CodingKeys: String, CodingKey {
+    case content
+    case name
+    case role
+    case toolCallID
+    case toolCalls
+    case toolResultIsError
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    self.content = try container.decode(String.self, forKey: .content)
+    self.name = try container.decodeIfPresent(String.self, forKey: .name)
+    self.role = try container.decode(LLMMessageRole.self, forKey: .role)
+    self.toolCallID = try container.decodeIfPresent(String.self, forKey: .toolCallID)
+    self.toolCalls = try container.decodeIfPresent([LLMToolCall].self, forKey: .toolCalls) ?? []
+    self.toolResultIsError = try container.decodeIfPresent(Bool.self, forKey: .toolResultIsError) ?? false
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(content, forKey: .content)
+    try container.encodeIfPresent(name, forKey: .name)
+    try container.encode(role, forKey: .role)
+    try container.encodeIfPresent(toolCallID, forKey: .toolCallID)
+    if !toolCalls.isEmpty {
+      try container.encode(toolCalls, forKey: .toolCalls)
+    }
+    if toolResultIsError {
+      try container.encode(toolResultIsError, forKey: .toolResultIsError)
+    }
+  }
 }
 
 public struct LLMGenerationParameters: Equatable, Sendable {

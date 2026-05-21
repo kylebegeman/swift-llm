@@ -66,12 +66,14 @@ This is still the preferred default for offline Apple app flows.
 - tool choices are encoded as `auto`, `none`, `required`, or named function choice
 - assistant tool calls and tool-result messages become native `function_call` and `function_call_output` input items
 - response parsing reads `output_text`, message content, function calls, finish status, and token usage
+- failed response payloads and streaming failure events are normalized into `LLMClientError`
 - response and streaming transports are injectable
 
 The adapter follows the public OpenAI Responses and Structured Outputs documentation:
 
 - https://platform.openai.com/docs/api-reference/responses
 - https://platform.openai.com/docs/guides/structured-outputs
+- https://platform.openai.com/docs/guides/streaming-responses
 
 ### Anthropic
 
@@ -84,12 +86,14 @@ The adapter follows the public OpenAI Responses and Structured Outputs documenta
 - tool choices map to `auto`, `none`, `any`, or a named tool
 - assistant tool calls and tool-result messages become native `tool_use` and `tool_result` content blocks
 - response parsing reads text blocks, tool use blocks, stop reasons, and token usage
+- streaming parsing handles text deltas, tool-use JSON deltas, stop reasons, token usage, and provider error events
 - response and streaming transports are injectable
 
 The adapter follows Anthropic's Messages API documentation:
 
 - https://docs.anthropic.com/en/api/messages
 - https://docs.anthropic.com/en/api/messages-examples
+- https://docs.anthropic.com/en/docs/build-with-claude/streaming
 
 ## Routing And Fallback
 

@@ -71,6 +71,13 @@ extension Array where Element == LLMStreamEvent {
       return delta
     }
   }
+
+  var toolCalls: [LLMToolCall] {
+    compactMap { event -> LLMToolCall? in
+      guard case let .toolCall(toolCall) = event else { return nil }
+      return toolCall
+    }
+  }
 }
 
 func lineStream(_ lines: [String]) -> AsyncThrowingStream<String, any Error> {

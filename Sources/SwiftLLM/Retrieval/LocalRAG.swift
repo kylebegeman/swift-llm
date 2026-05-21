@@ -199,6 +199,9 @@ public struct KeywordLocalRetriever: LocalRetriever {
 
     let ranked = snippets
       .sorted { lhs, rhs in
+        if lhs.isRequired != rhs.isRequired {
+          return lhs.isRequired
+        }
         if lhs.score != rhs.score {
           return lhs.score > rhs.score
         }

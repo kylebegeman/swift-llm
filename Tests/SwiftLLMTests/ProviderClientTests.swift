@@ -166,6 +166,68 @@ struct ProviderClientTests {
   }
 
   @Test
+  func openAIClientThrowsFailedResponsePayloads() async throws {
+    let client = OpenAIClient(
+      apiKey: "test-key",
+      model: "gpt-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: OpenAIHTTPTransport { _ in
+        OpenAIHTTPResponse(
+          statusCode: 200,
+          body: Data(
+            """
+            {
+              "id": "resp_failed",
+              "model": "gpt-test",
+              "status": "failed",
+              "error": {
+                "code": "server_error",
+                "message": "The model failed to generate a response."
+              }
+            }
+            """.utf8
+          )
+        )
+      }
+    )
+
+    do {
+      _ = try await client.respond(to: LLMRequest(messages: [.user("Fail.")]))
+      Issue.record("Expected failed OpenAI response payload to throw.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .provider("The model failed to generate a response."))
+    }
+  }
+
+  @Test
+  func openAIClientThrowsStreamErrorEvents() async throws {
+    let client = OpenAIClient(
+      apiKey: "test-key",
+      model: "gpt-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: OpenAIHTTPTransport(
+        send: { _ in OpenAIHTTPResponse(statusCode: 500, body: Data()) },
+        stream: { _ in
+          OpenAIHTTPStreamResponse(
+            statusCode: 200,
+            lines: lineStream([
+              #"data: {"type":"response.failed","response":{"id":"resp_failed","status":"failed","error":{"code":"server_error","message":"Stream failed."}}}"#,
+              "",
+            ])
+          )
+        }
+      )
+    )
+
+    do {
+      for try await _ in client.stream(to: LLMRequest(messages: [.user("Stream.")])) {}
+      Issue.record("Expected OpenAI stream failure event to throw.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .provider("Stream failed."))
+    }
+  }
+
+  @Test
   func openAIClientEncodesNativeToolHistory() async throws {
     let capture = RequestCapture<OpenAIHTTPRequest>()
     let client = OpenAIClient(
@@ -360,6 +422,94 @@ struct ProviderClientTests {
     #expect(events.textDeltas == ["Hello ", "stream"])
     #expect(events.completedResponse?.text == "Hello stream")
     #expect(events.completedResponse?.metadata.promptVersion == "stream-v2")
+  }
+
+  @Test
+  func anthropicClientStreamsToolCallsThroughInjectedTransport() async throws {
+    let client = AnthropicClient(
+      apiKey: "test-key",
+      model: "claude-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: AnthropicHTTPTransport(
+        send: { _ in
+          Issue.record("Streaming should not call the non-streaming transport.")
+          return AnthropicHTTPResponse(statusCode: 500, body: Data())
+        },
+        stream: { _ in
+          AnthropicHTTPStreamResponse(
+            statusCode: 200,
+            lines: lineStream([
+              #"data: {"type":"message_start","message":{"usage":{"input_tokens":8,"output_tokens":1}}}"#,
+              "",
+              #"data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_stream","name":"lookup_note","input":{}}}"#,
+              "",
+              #"data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"id\":\""}}"#,
+              "",
+              #"data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"1\"}"}}"#,
+              "",
+              #"data: {"type":"content_block_stop","index":0}"#,
+              "",
+              #"data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":9}}"#,
+              "",
+              #"data: {"type":"message_stop"}"#,
+              "",
+            ])
+          )
+        }
+      )
+    )
+
+    var events: [LLMStreamEvent] = []
+    for try await event in client.stream(
+      to: LLMRequest(
+        messages: [.user("Lookup note 1.")],
+        tools: [
+          LLMToolDefinition(
+            name: "lookup_note",
+            description: "Look up a note.",
+            inputSchema: ["type": "object"]
+          ),
+        ]
+      )
+    ) {
+      events.append(event)
+    }
+
+    #expect(events.toolCalls.map(\.id) == ["toolu_stream"])
+    #expect(events.toolCalls.first?.name == "lookup_note")
+    #expect(events.toolCalls.first?.argumentsJSON == #"{"id":"1"}"#)
+    #expect(events.completedResponse?.finishReason == .toolCalls)
+    #expect(events.completedResponse?.toolCalls.map(\.id) == ["toolu_stream"])
+    #expect(events.completedResponse?.tokenUsage?.measuredInputTokens == 8)
+    #expect(events.completedResponse?.tokenUsage?.measuredOutputTokens == 9)
+  }
+
+  @Test
+  func anthropicClientThrowsStreamErrorEvents() async throws {
+    let client = AnthropicClient(
+      apiKey: "test-key",
+      model: "claude-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: AnthropicHTTPTransport(
+        send: { _ in AnthropicHTTPResponse(statusCode: 500, body: Data()) },
+        stream: { _ in
+          AnthropicHTTPStreamResponse(
+            statusCode: 200,
+            lines: lineStream([
+              #"data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}"#,
+              "",
+            ])
+          )
+        }
+      )
+    )
+
+    do {
+      for try await _ in client.stream(to: LLMRequest(messages: [.user("Stream.")])) {}
+      Issue.record("Expected Anthropic stream error event to throw.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .provider("Overloaded"))
+    }
   }
 
   @Test

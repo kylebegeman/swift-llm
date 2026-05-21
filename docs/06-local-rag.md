@@ -79,6 +79,8 @@ The important boundary is `LocalRetriever`. Apps can plug in SQLite FTS, GRDB, C
 
 `KeywordLocalRetriever` is intentionally simple. It is useful for tests, demos, and deterministic fallback behavior. It is not meant to be the final production search engine for every app.
 
+When a query supplies required source IDs, the keyword retriever keeps matching required snippets ahead of optional snippets before applying `maxResults`. This is important for user-selected notes, transcripts, or attachments because an exact user selection should not be crowded out by higher-scoring incidental keyword matches.
+
 ## Pipeline Shape
 
 The current package pipeline is:

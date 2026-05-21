@@ -177,6 +177,8 @@ public struct OpenAIClient: LLMClient {
     do {
       return try JSONDecoder.provider.decode(OpenAIResponsePayload.self, from: httpResponse.body)
         .llmResponse(metadata: metadata(for: request))
+    } catch let error as LLMClientError {
+      throw error
     } catch {
       throw LLMClientError(
         reason: .decoding,
@@ -342,9 +344,15 @@ public struct OpenAIClient: LLMClient {
           continuation.yield(.toolCall(toolCall))
         }
       case "response.completed", "response.done":
-        if let response = event.response?.llmResponse(metadata: metadata) {
+        if let response = try event.response?.llmResponse(metadata: metadata) {
           completedResponse = response
         }
+      case "error", "response.failed":
+        let message = event.error?.message ?? event.response?.error?.message ?? "OpenAI stream failed."
+        throw LLMClientError(
+          reason: .provider(message),
+          debugDescription: message
+        )
       default:
         break
       }
@@ -560,6 +568,7 @@ private enum OpenAIToolChoice: Encodable {
 }
 
 private struct OpenAIResponsePayload: Decodable {
+  var error: OpenAIProviderError?
   var finishReason: String?
   var id: String?
   var model: String?
@@ -569,6 +578,7 @@ private struct OpenAIResponsePayload: Decodable {
   var usage: OpenAIUsage?
 
   enum CodingKeys: String, CodingKey {
+    case error
     case finishReason = "finish_reason"
     case id
     case model
@@ -578,9 +588,17 @@ private struct OpenAIResponsePayload: Decodable {
     case usage
   }
 
-  func llmResponse(metadata: LLMProviderMetadata) -> LLMResponse {
+  func llmResponse(metadata: LLMProviderMetadata) throws -> LLMResponse {
+    if status == "failed" {
+      let message = error?.message ?? "OpenAI response failed."
+      throw LLMClientError(
+        reason: .provider(message),
+        debugDescription: message
+      )
+    }
+
     let toolCalls = output?.compactMap(\.toolCall) ?? []
-    let text = outputText ?? output?.flatMap(\.textParts).joined() ?? ""
+    let text = outputText ?? output?.flatMap(\.textParts).joined(separator: "\n") ?? ""
     return LLMResponse(
       id: id ?? UUID().uuidString,
       text: text,
@@ -670,6 +688,7 @@ private struct OpenAIUsage: Decodable {
 
 private struct OpenAIStreamEvent: Decodable {
   var delta: String?
+  var error: OpenAIProviderError?
   var item: OpenAIOutputItem?
   var response: OpenAIResponsePayload?
   var type: String?

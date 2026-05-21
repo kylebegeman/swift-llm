@@ -200,13 +200,13 @@ public struct AnthropicClient: LLMClient {
             )
           }
 
-          var accumulatedText = ""
+          var streamState = AnthropicStreamState()
           var dataLines: [String] = []
           for try await line in streamResponse.lines {
             if line.isEmpty {
               try Self.processStreamDataLines(
                 dataLines,
-                accumulatedText: &accumulatedText,
+                streamState: &streamState,
                 continuation: continuation
               )
               dataLines.removeAll(keepingCapacity: true)
@@ -217,14 +217,16 @@ public struct AnthropicClient: LLMClient {
 
           try Self.processStreamDataLines(
             dataLines,
-            accumulatedText: &accumulatedText,
+            streamState: &streamState,
             continuation: continuation
           )
           continuation.yield(
             .completed(
               LLMResponse(
-                text: accumulatedText,
-                finishReason: .stop,
+                text: streamState.accumulatedText,
+                toolCalls: streamState.toolCalls,
+                finishReason: streamState.finishReason ?? .stop,
+                tokenUsage: streamState.tokenUsage,
                 model: model,
                 metadata: metadata
               )
@@ -314,17 +316,65 @@ public struct AnthropicClient: LLMClient {
 
   private static func processStreamDataLines(
     _ dataLines: [String],
-    accumulatedText: inout String,
+    streamState: inout AnthropicStreamState,
     continuation: AsyncThrowingStream<LLMStreamEvent, any Error>.Continuation
   ) throws {
     for dataLine in dataLines where dataLine != "[DONE]" && !dataLine.isEmpty {
       let event = try JSONDecoder.provider.decode(AnthropicStreamEvent.self, from: Data(dataLine.utf8))
-      if event.type == "content_block_delta",
-         event.delta?.type == "text_delta",
-         let text = event.delta?.text
-      {
-        accumulatedText += text
-        continuation.yield(.textDelta(text))
+      switch event.type {
+      case "message_start":
+        streamState.recordUsage(event.message?.usage)
+
+      case "content_block_start":
+        if let index = event.index,
+           let contentBlock = event.contentBlock,
+           contentBlock.type == "tool_use",
+           let id = contentBlock.id,
+           let name = contentBlock.name
+        {
+          streamState.startToolCall(
+            index: index,
+            id: id,
+            name: name,
+            input: contentBlock.input
+          )
+        }
+
+      case "content_block_delta":
+        if event.delta?.type == "text_delta",
+           let text = event.delta?.text
+        {
+          streamState.accumulatedText += text
+          continuation.yield(.textDelta(text))
+        } else if event.delta?.type == "input_json_delta",
+                  let index = event.index,
+                  let partialJSON = event.delta?.partialJSON
+        {
+          streamState.appendToolInputDelta(partialJSON, index: index)
+        }
+
+      case "content_block_stop":
+        if let index = event.index,
+           let toolCall = streamState.finishToolCall(index: index)
+        {
+          continuation.yield(.toolCall(toolCall))
+        }
+
+      case "message_delta":
+        streamState.recordUsage(event.usage)
+        if let stopReason = event.delta?.stopReason {
+          streamState.finishReason = stopReason.anthropicFinishReason
+        }
+
+      case "error":
+        let message = event.error?.message ?? "Anthropic stream failed."
+        throw LLMClientError(
+          reason: .provider(message),
+          debugDescription: message
+        )
+
+      default:
+        break
       }
     }
   }
@@ -516,7 +566,7 @@ private struct AnthropicMessageResponse: Decodable {
   }
 
   func llmResponse(metadata: LLMProviderMetadata) -> LLMResponse {
-    let text = content.compactMap(\.text).joined()
+    let text = content.compactMap(\.text).joined(separator: "\n")
     return LLMResponse(
       id: id,
       text: text,
@@ -529,18 +579,7 @@ private struct AnthropicMessageResponse: Decodable {
   }
 
   private var mappedFinishReason: LLMFinishReason? {
-    switch stopReason {
-    case "end_turn", "stop_sequence":
-      return .stop
-    case "max_tokens":
-      return .length
-    case "tool_use":
-      return .toolCalls
-    case nil:
-      return nil
-    default:
-      return .unknown
-    }
+    stopReason?.anthropicFinishReason
   }
 }
 
@@ -585,13 +624,41 @@ private struct AnthropicUsage: Decodable {
 }
 
 private struct AnthropicStreamEvent: Decodable {
+  var contentBlock: AnthropicContentBlock?
   var delta: AnthropicStreamDelta?
+  var error: AnthropicProviderError?
+  var index: Int?
+  var message: AnthropicStreamMessage?
   var type: String?
+  var usage: AnthropicUsage?
+
+  enum CodingKeys: String, CodingKey {
+    case contentBlock = "content_block"
+    case delta
+    case error
+    case index
+    case message
+    case type
+    case usage
+  }
 }
 
 private struct AnthropicStreamDelta: Decodable {
+  var partialJSON: String?
+  var stopReason: String?
   var text: String?
   var type: String?
+
+  enum CodingKeys: String, CodingKey {
+    case partialJSON = "partial_json"
+    case stopReason = "stop_reason"
+    case text
+    case type
+  }
+}
+
+private struct AnthropicStreamMessage: Decodable {
+  var usage: AnthropicUsage?
 }
 
 private struct AnthropicErrorPayload: Decodable {
@@ -600,6 +667,86 @@ private struct AnthropicErrorPayload: Decodable {
 
 private struct AnthropicProviderError: Decodable {
   var message: String?
+}
+
+private struct AnthropicStreamState {
+  var accumulatedText = ""
+  var finishReason: LLMFinishReason?
+  var inputTokens: Int?
+  var outputTokens: Int?
+  private var completedToolCalls: [LLMToolCall] = []
+  private var pendingToolCalls: [Int: PendingAnthropicToolCall] = [:]
+
+  var toolCalls: [LLMToolCall] {
+    completedToolCalls
+  }
+
+  var tokenUsage: LLMTokenUsage? {
+    guard inputTokens != nil || outputTokens != nil else { return nil }
+    return LLMTokenUsage(
+      estimatedInputTokens: inputTokens ?? 0,
+      estimatedOutputTokens: outputTokens ?? 0,
+      measuredInputTokens: inputTokens,
+      measuredOutputTokens: outputTokens
+    )
+  }
+
+  mutating func recordUsage(_ usage: AnthropicUsage?) {
+    if let inputTokens = usage?.inputTokens {
+      self.inputTokens = inputTokens
+    }
+    if let outputTokens = usage?.outputTokens {
+      self.outputTokens = outputTokens
+    }
+  }
+
+  mutating func startToolCall(
+    index: Int,
+    id: String,
+    name: String,
+    input: JSONValue?
+  ) {
+    let inputJSON = input.flatMap { input in
+      try? JSONEncoder.provider.encode(input)
+    }
+    .map { String(decoding: $0, as: UTF8.self) }
+    pendingToolCalls[index] = PendingAnthropicToolCall(
+      id: id,
+      initialArgumentsJSON: inputJSON ?? "{}",
+      name: name
+    )
+  }
+
+  mutating func appendToolInputDelta(
+    _ partialJSON: String,
+    index: Int
+  ) {
+    pendingToolCalls[index]?.partialArgumentsJSON += partialJSON
+  }
+
+  mutating func finishToolCall(index: Int) -> LLMToolCall? {
+    guard let pendingToolCall = pendingToolCalls.removeValue(forKey: index) else {
+      return nil
+    }
+    let toolCall = pendingToolCall.toolCall
+    completedToolCalls.append(toolCall)
+    return toolCall
+  }
+}
+
+private struct PendingAnthropicToolCall {
+  var id: String
+  var initialArgumentsJSON: String
+  var name: String
+  var partialArgumentsJSON = ""
+
+  var toolCall: LLMToolCall {
+    LLMToolCall(
+      id: id,
+      name: name,
+      argumentsJSON: partialArgumentsJSON.isEmpty ? initialArgumentsJSON : partialArgumentsJSON
+    )
+  }
 }
 
 private extension LLMRequest {
@@ -715,6 +862,21 @@ private extension LLMMessageRole {
       return "assistant"
     case .developer, .system, .tool, .user:
       return "user"
+    }
+  }
+}
+
+private extension String {
+  var anthropicFinishReason: LLMFinishReason {
+    switch self {
+    case "end_turn", "stop_sequence":
+      return .stop
+    case "max_tokens":
+      return .length
+    case "tool_use":
+      return .toolCalls
+    default:
+      return .unknown
     }
   }
 }
