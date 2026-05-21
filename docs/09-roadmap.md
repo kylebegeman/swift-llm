@@ -129,7 +129,7 @@ Add Swift-native provider access that can support local Foundation Models plus e
 - Foundation Models conformance to `LLMClient`: implemented
 - OpenAI Responses API adapter: implemented
 - Anthropic Messages API adapter: implemented
-- injectable HTTP transports for provider tests: implemented
+- injectable response and streaming HTTP transports for provider tests: implemented
 
 Acceptance criteria:
 

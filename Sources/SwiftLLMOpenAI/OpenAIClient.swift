@@ -46,36 +46,90 @@ public struct OpenAIHTTPResponse: Sendable {
   }
 }
 
-public struct OpenAIHTTPTransport: Sendable {
-  public var send: @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse
+public struct OpenAIHTTPStreamResponse: Sendable {
+  public var headers: [String: String]
+  public var lines: AsyncThrowingStream<String, any Error>
+  public var statusCode: Int
 
   public init(
-    send: @escaping @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse
+    statusCode: Int,
+    headers: [String: String] = [:],
+    lines: AsyncThrowingStream<String, any Error>
+  ) {
+    self.headers = headers
+    self.lines = lines
+    self.statusCode = statusCode
+  }
+}
+
+public struct OpenAIHTTPTransport: Sendable {
+  public var send: @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse
+  public var stream: @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPStreamResponse
+
+  public init(
+    send: @escaping @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse,
+    stream: (@Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPStreamResponse)? = nil
   ) {
     self.send = send
+    self.stream = stream ?? { _ in
+      throw LLMClientError(
+        reason: .unsupported,
+        debugDescription: "OpenAI streaming transport was not configured."
+      )
+    }
   }
 
-  public static let live = Self { request in
+  public static let live = Self(
+    send: { request in
+      try await liveSend(request)
+    },
+    stream: { request in
+      try await liveStream(request)
+    }
+  )
+
+  private static func liveSend(_ request: OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse {
     let (data, response) = try await URLSession.shared.data(for: request.urlRequest())
     guard let httpResponse = response as? HTTPURLResponse else {
       throw LLMClientError(reason: .network, debugDescription: "OpenAI returned a non-HTTP response.")
     }
     return OpenAIHTTPResponse(
       statusCode: httpResponse.statusCode,
-      headers: httpResponse.allHeaderFields.reduce(into: [:]) { headers, field in
-        if let key = field.key as? String,
-           let value = field.value as? String
-        {
-          headers[key] = value
-        }
-      },
+      headers: stringHeaders(from: httpResponse),
       body: data
+    )
+  }
+
+  private static func liveStream(_ request: OpenAIHTTPRequest) async throws -> OpenAIHTTPStreamResponse {
+    let (bytes, response) = try await URLSession.shared.bytes(for: request.urlRequest())
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw LLMClientError(reason: .network, debugDescription: "OpenAI returned a non-HTTP response.")
+    }
+    let lines = AsyncThrowingStream<String, any Error> { continuation in
+      let task = Task {
+        do {
+          for try await line in bytes.lines {
+            continuation.yield(line)
+          }
+          continuation.finish()
+        } catch {
+          continuation.finish(throwing: error)
+        }
+      }
+      continuation.onTermination = { _ in
+        task.cancel()
+      }
+    }
+    return OpenAIHTTPStreamResponse(
+      statusCode: httpResponse.statusCode,
+      headers: stringHeaders(from: httpResponse),
+      lines: lines
     )
   }
 }
 
 public struct OpenAIClient: LLMClient {
-  public var apiKey: String
+  private var apiKey: String
   public var baseURL: URL
   public var model: String
   public var organizationID: String?
@@ -118,7 +172,7 @@ public struct OpenAIClient: LLMClient {
 
     do {
       return try JSONDecoder.provider.decode(OpenAIResponsePayload.self, from: httpResponse.body)
-        .llmResponse(metadata: metadata)
+        .llmResponse(metadata: metadata(for: request))
     } catch {
       throw LLMClientError(
         reason: .decoding,
@@ -129,25 +183,23 @@ public struct OpenAIClient: LLMClient {
 
   public func stream(to request: LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error> {
     AsyncThrowingStream { continuation in
+      let metadata = metadata(for: request)
       continuation.yield(.started(metadata))
       let task = Task {
         do {
           let httpRequest = try responsesHTTPRequest(for: request, stream: true)
-          let (bytes, response) = try await URLSession.shared.bytes(for: httpRequest.urlRequest())
-          guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMClientError(reason: .network, debugDescription: "OpenAI returned a non-HTTP response.")
-          }
-          guard 200..<300 ~= httpResponse.statusCode else {
+          let streamResponse = try await transport.stream(httpRequest)
+          guard 200..<300 ~= streamResponse.statusCode else {
             throw LLMClientError(
-              reason: Self.errorReason(forStatusCode: httpResponse.statusCode, providerMessage: nil),
-              statusCode: httpResponse.statusCode
+              reason: Self.errorReason(forStatusCode: streamResponse.statusCode, providerMessage: nil),
+              statusCode: streamResponse.statusCode
             )
           }
 
           var accumulatedText = ""
           var completedResponse: LLMResponse?
           var dataLines: [String] = []
-          for try await line in bytes.lines {
+          for try await line in streamResponse.lines {
             if line.isEmpty {
               try Self.processStreamDataLines(
                 dataLines,
@@ -220,6 +272,14 @@ public struct OpenAIClient: LLMClient {
       headers["OpenAI-Project"] = projectID
     }
     return OpenAIHTTPRequest(url: url, headers: headers, body: data)
+  }
+
+  private func metadata(for request: LLMRequest) -> LLMProviderMetadata {
+    var metadata = self.metadata
+    if let promptVersion = request.metadata["promptVersion"] {
+      metadata.promptVersion = promptVersion
+    }
+    return metadata
   }
 
   private static func validate(_ response: OpenAIHTTPResponse) throws {
@@ -639,5 +699,15 @@ private extension JSONEncoder {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     return encoder
+  }
+}
+
+private func stringHeaders(from response: HTTPURLResponse) -> [String: String] {
+  response.allHeaderFields.reduce(into: [:]) { headers, field in
+    if let key = field.key as? String,
+       let value = field.value as? String
+    {
+      headers[key] = value
+    }
   }
 }

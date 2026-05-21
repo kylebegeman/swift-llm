@@ -363,14 +363,17 @@ extension FoundationModelClient: LLMClient {
   }
 
   public func respond(to request: LLMRequest) async throws -> LLMResponse {
+    try Self.validateSupportedFeatures(for: request)
+
+    let responseMetadata = metadata(for: request)
     let prompt = CompiledPrompt(
       contract: PromptContract(
         id: request.metadata["promptID"] ?? "llm-request",
-        version: request.metadata["promptVersion"] ?? metadata.promptVersion,
+        version: responseMetadata.promptVersion,
         instructions: Self.instructions(for: request),
         responseSchemaDescription: request.responseFormat.foundationPromptDescription ?? ""
       ),
-      metadata: metadata,
+      metadata: responseMetadata,
       userPrompt: request.messages.foundationUserPrompt
     )
     let response = try await respond(
@@ -394,6 +397,37 @@ extension FoundationModelClient: LLMClient {
     )
   }
 
+  private func metadata(for request: LLMRequest) -> LLMProviderMetadata {
+    var metadata = self.metadata
+    if let promptVersion = request.metadata["promptVersion"] {
+      metadata.promptVersion = promptVersion
+    }
+    return metadata
+  }
+
+  private static func validateSupportedFeatures(for request: LLMRequest) throws {
+    if !request.tools.isEmpty || request.toolChoice?.requiresToolSupport == true {
+      throw LLMClientError(
+        reason: .unsupported,
+        debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter does not support tool calling yet."
+      )
+    }
+
+    if request.parameters.topP != nil {
+      throw LLMClientError(
+        reason: .unsupported,
+        debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter does not support top-p sampling."
+      )
+    }
+
+    if !request.parameters.stopSequences.isEmpty {
+      throw LLMClientError(
+        reason: .unsupported,
+        debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter does not support stop sequences."
+      )
+    }
+  }
+
   private static func instructions(for request: LLMRequest) -> String {
     let roleInstructions = request.messages
       .filter { $0.role == .system || $0.role == .developer }
@@ -405,6 +439,17 @@ extension FoundationModelClient: LLMClient {
         return text
       }
       .joined(separator: "\n\n")
+  }
+}
+
+private extension LLMToolChoice {
+  var requiresToolSupport: Bool {
+    switch self {
+    case .auto, .none:
+      return false
+    case .required, .tool:
+      return true
+    }
   }
 }
 

@@ -603,6 +603,39 @@ struct SwiftLLMTests {
   }
 
   @Test
+  func keywordLocalRetrieverIncludesRequiredSourcesForEmptyQueries() async throws {
+    let retriever = KeywordLocalRetriever(
+      documents: [
+        RetrievableDocument(
+          id: "required",
+          text: "Always include this local policy note.",
+          displayName: "Policy note",
+          kind: "note"
+        ),
+        RetrievableDocument(
+          id: "optional",
+          text: "Only include this note when query terms match.",
+          displayName: "Optional note",
+          kind: "note"
+        ),
+      ],
+      maxTokensPerSnippet: 32
+    )
+
+    let result = try await retriever.retrieve(
+      LocalRetrievalQuery(
+        text: "",
+        maxResults: 4,
+        requiredSourceIDs: ["required"]
+      )
+    )
+
+    #expect(result.snippets.map(\.sourceID) == ["required"])
+    #expect(result.snippets.first?.isRequired == true)
+    #expect(result.sources.map(\.id) == ["required"])
+  }
+
+  @Test
   func localRAGPipelinePacksContextAndBuildsCitations() async throws {
     let retriever = KeywordLocalRetriever(
       documents: [

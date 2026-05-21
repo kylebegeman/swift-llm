@@ -46,36 +46,90 @@ public struct AnthropicHTTPResponse: Sendable {
   }
 }
 
-public struct AnthropicHTTPTransport: Sendable {
-  public var send: @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse
+public struct AnthropicHTTPStreamResponse: Sendable {
+  public var headers: [String: String]
+  public var lines: AsyncThrowingStream<String, any Error>
+  public var statusCode: Int
 
   public init(
-    send: @escaping @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse
+    statusCode: Int,
+    headers: [String: String] = [:],
+    lines: AsyncThrowingStream<String, any Error>
+  ) {
+    self.headers = headers
+    self.lines = lines
+    self.statusCode = statusCode
+  }
+}
+
+public struct AnthropicHTTPTransport: Sendable {
+  public var send: @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse
+  public var stream: @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPStreamResponse
+
+  public init(
+    send: @escaping @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse,
+    stream: (@Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPStreamResponse)? = nil
   ) {
     self.send = send
+    self.stream = stream ?? { _ in
+      throw LLMClientError(
+        reason: .unsupported,
+        debugDescription: "Anthropic streaming transport was not configured."
+      )
+    }
   }
 
-  public static let live = Self { request in
+  public static let live = Self(
+    send: { request in
+      try await liveSend(request)
+    },
+    stream: { request in
+      try await liveStream(request)
+    }
+  )
+
+  private static func liveSend(_ request: AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse {
     let (data, response) = try await URLSession.shared.data(for: request.urlRequest())
     guard let httpResponse = response as? HTTPURLResponse else {
       throw LLMClientError(reason: .network, debugDescription: "Anthropic returned a non-HTTP response.")
     }
     return AnthropicHTTPResponse(
       statusCode: httpResponse.statusCode,
-      headers: httpResponse.allHeaderFields.reduce(into: [:]) { headers, field in
-        if let key = field.key as? String,
-           let value = field.value as? String
-        {
-          headers[key] = value
-        }
-      },
+      headers: stringHeaders(from: httpResponse),
       body: data
+    )
+  }
+
+  private static func liveStream(_ request: AnthropicHTTPRequest) async throws -> AnthropicHTTPStreamResponse {
+    let (bytes, response) = try await URLSession.shared.bytes(for: request.urlRequest())
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw LLMClientError(reason: .network, debugDescription: "Anthropic returned a non-HTTP response.")
+    }
+    let lines = AsyncThrowingStream<String, any Error> { continuation in
+      let task = Task {
+        do {
+          for try await line in bytes.lines {
+            continuation.yield(line)
+          }
+          continuation.finish()
+        } catch {
+          continuation.finish(throwing: error)
+        }
+      }
+      continuation.onTermination = { _ in
+        task.cancel()
+      }
+    }
+    return AnthropicHTTPStreamResponse(
+      statusCode: httpResponse.statusCode,
+      headers: stringHeaders(from: httpResponse),
+      lines: lines
     )
   }
 }
 
 public struct AnthropicClient: LLMClient {
-  public var apiKey: String
+  private var apiKey: String
   public var apiVersion: String
   public var baseURL: URL
   public var defaultMaxTokens: Int
@@ -118,7 +172,7 @@ public struct AnthropicClient: LLMClient {
 
     do {
       return try JSONDecoder.provider.decode(AnthropicMessageResponse.self, from: httpResponse.body)
-        .llmResponse(metadata: metadata)
+        .llmResponse(metadata: metadata(for: request))
     } catch {
       throw LLMClientError(
         reason: .decoding,
@@ -129,24 +183,22 @@ public struct AnthropicClient: LLMClient {
 
   public func stream(to request: LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error> {
     AsyncThrowingStream { continuation in
+      let metadata = metadata(for: request)
       continuation.yield(.started(metadata))
       let task = Task {
         do {
           let httpRequest = try messagesHTTPRequest(for: request, stream: true)
-          let (bytes, response) = try await URLSession.shared.bytes(for: httpRequest.urlRequest())
-          guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMClientError(reason: .network, debugDescription: "Anthropic returned a non-HTTP response.")
-          }
-          guard 200..<300 ~= httpResponse.statusCode else {
+          let streamResponse = try await transport.stream(httpRequest)
+          guard 200..<300 ~= streamResponse.statusCode else {
             throw LLMClientError(
-              reason: Self.errorReason(forStatusCode: httpResponse.statusCode, providerMessage: nil),
-              statusCode: httpResponse.statusCode
+              reason: Self.errorReason(forStatusCode: streamResponse.statusCode, providerMessage: nil),
+              statusCode: streamResponse.statusCode
             )
           }
 
           var accumulatedText = ""
           var dataLines: [String] = []
-          for try await line in bytes.lines {
+          for try await line in streamResponse.lines {
             if line.isEmpty {
               try Self.processStreamDataLines(
                 dataLines,
@@ -211,6 +263,14 @@ public struct AnthropicClient: LLMClient {
       ],
       body: data
     )
+  }
+
+  private func metadata(for request: LLMRequest) -> LLMProviderMetadata {
+    var metadata = self.metadata
+    if let promptVersion = request.metadata["promptVersion"] {
+      metadata.promptVersion = promptVersion
+    }
+    return metadata
   }
 
   private static func validate(_ response: AnthropicHTTPResponse) throws {
@@ -558,5 +618,15 @@ private extension JSONEncoder {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     return encoder
+  }
+}
+
+private func stringHeaders(from response: HTTPURLResponse) -> [String: String] {
+  response.allHeaderFields.reduce(into: [:]) { headers, field in
+    if let key = field.key as? String,
+       let value = field.value as? String
+    {
+      headers[key] = value
+    }
   }
 }

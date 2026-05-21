@@ -88,7 +88,10 @@ struct ProviderClientTests {
           maxOutputTokens: 120,
           topP: 0.9,
           stopSequences: ["END"]
-        )
+        ),
+        metadata: [
+          "promptVersion": "summary-v3",
+        ]
       )
     )
     let request = try #require(await capture.value())
@@ -110,6 +113,55 @@ struct ProviderClientTests {
     #expect(response.toolCalls.first?.name == "lookup_note")
     #expect(response.tokenUsage?.measuredInputTokens == 12)
     #expect(response.metadata.providerKind == .openAI)
+    #expect(response.metadata.promptVersion == "summary-v3")
+  }
+
+  @Test
+  func openAIClientStreamsThroughInjectedTransport() async throws {
+    let capture = RequestCapture<OpenAIHTTPRequest>()
+    let client = OpenAIClient(
+      apiKey: "test-key",
+      model: "gpt-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: OpenAIHTTPTransport(
+        send: { _ in
+          Issue.record("Streaming should not call the non-streaming transport.")
+          return OpenAIHTTPResponse(statusCode: 500, body: Data())
+        },
+        stream: { request in
+          await capture.record(request)
+          return OpenAIHTTPStreamResponse(
+            statusCode: 200,
+            lines: lineStream([
+              #"data: {"type":"response.output_text.delta","delta":"Hello "}"#,
+              "",
+              #"data: {"type":"response.output_text.delta","delta":"stream"}"#,
+              "",
+              #"data: {"type":"response.completed","response":{"id":"resp_stream","status":"completed","output_text":"Hello stream","usage":{"input_tokens":3,"output_tokens":2}}}"#,
+              "",
+            ])
+          )
+        }
+      )
+    )
+
+    var events: [LLMStreamEvent] = []
+    for try await event in client.stream(
+      to: LLMRequest(
+        messages: [.user("Stream this.")],
+        metadata: ["promptVersion": "stream-v1"]
+      )
+    ) {
+      events.append(event)
+    }
+    let request = try #require(await capture.value())
+
+    #expect(request.url.absoluteString == "https://example.test/v1/responses")
+    #expect(try request.jsonObject()["stream"] == true)
+    #expect(events.textDeltas == ["Hello ", "stream"])
+    #expect(events.completedResponse?.text == "Hello stream")
+    #expect(events.completedResponse?.metadata.promptVersion == "stream-v1")
+    #expect(events.completedResponse?.tokenUsage?.measuredOutputTokens == 2)
   }
 
   @Test
@@ -179,7 +231,10 @@ struct ProviderClientTests {
           ),
         ],
         toolChoice: .required,
-        parameters: LLMGenerationParameters(maxOutputTokens: 80)
+        parameters: LLMGenerationParameters(maxOutputTokens: 80),
+        metadata: [
+          "promptVersion": "summary-v4",
+        ]
       )
     )
     let request = try #require(await capture.value())
@@ -199,6 +254,54 @@ struct ProviderClientTests {
     #expect(response.toolCalls.first?.name == "lookup_note")
     #expect(response.tokenUsage?.measuredOutputTokens == 5)
     #expect(response.metadata.providerKind == .anthropic)
+    #expect(response.metadata.promptVersion == "summary-v4")
+  }
+
+  @Test
+  func anthropicClientStreamsThroughInjectedTransport() async throws {
+    let capture = RequestCapture<AnthropicHTTPRequest>()
+    let client = AnthropicClient(
+      apiKey: "test-key",
+      model: "claude-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: AnthropicHTTPTransport(
+        send: { _ in
+          Issue.record("Streaming should not call the non-streaming transport.")
+          return AnthropicHTTPResponse(statusCode: 500, body: Data())
+        },
+        stream: { request in
+          await capture.record(request)
+          return AnthropicHTTPStreamResponse(
+            statusCode: 200,
+            lines: lineStream([
+              #"data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello "}}"#,
+              "",
+              #"data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"stream"}}"#,
+              "",
+              #"data: {"type":"message_stop"}"#,
+              "",
+            ])
+          )
+        }
+      )
+    )
+
+    var events: [LLMStreamEvent] = []
+    for try await event in client.stream(
+      to: LLMRequest(
+        messages: [.user("Stream this.")],
+        metadata: ["promptVersion": "stream-v2"]
+      )
+    ) {
+      events.append(event)
+    }
+    let request = try #require(await capture.value())
+
+    #expect(request.url.absoluteString == "https://example.test/v1/messages")
+    #expect(try request.jsonObject()["stream"] == true)
+    #expect(events.textDeltas == ["Hello ", "stream"])
+    #expect(events.completedResponse?.text == "Hello stream")
+    #expect(events.completedResponse?.metadata.promptVersion == "stream-v2")
   }
 
   @Test
@@ -300,13 +403,60 @@ struct ProviderClientTests {
       to: LLMRequest(
         instructions: "Summarize locally.",
         messages: [.user("a private transcript")],
-        parameters: LLMGenerationParameters(maxOutputTokens: 48)
+        parameters: LLMGenerationParameters(maxOutputTokens: 48),
+        metadata: [
+          "promptVersion": "local-summary-v2",
+        ]
       )
     )
 
     #expect(response.text == "Foundation response for a private transcript")
     #expect(response.metadata.providerKind == .appleFoundationModels)
+    #expect(response.metadata.promptVersion == "local-summary-v2")
     #expect(response.tokenUsage?.estimatedOutputTokens == 5)
+  }
+
+  @Test
+  func foundationModelClientRejectsUnsupportedProviderNeutralFeatures() async {
+    let client = FoundationModelClient(
+      checkAvailability: { _, _ in .available },
+      countTokens: { request in TokenCounter.latinHeuristic.count(request.text) },
+      prewarm: { _ in },
+      respond: { request in
+        FoundationModelGenerationResponse(
+          content: request.prompt.userPrompt,
+          metadata: request.prompt.metadata,
+          tokenUsage: LLMTokenUsage(
+            estimatedInputTokens: 1,
+            estimatedOutputTokens: 1
+          ),
+          startedAt: Date(timeIntervalSince1970: 1),
+          completedAt: Date(timeIntervalSince1970: 2)
+        )
+      }
+    )
+
+    do {
+      _ = try await client.respond(
+        to: LLMRequest(
+          messages: [.user("Use a tool.")],
+          tools: [
+            LLMToolDefinition(
+              name: "lookup_note",
+              description: "Look up a note.",
+              inputSchema: [
+                "type": "object",
+              ]
+            ),
+          ]
+        )
+      )
+      Issue.record("Expected FoundationModelClient to reject unsupported tool requests.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .unsupported)
+    } catch {
+      Issue.record("Expected LLMClientError, got \(error).")
+    }
   }
 }
 
@@ -348,5 +498,31 @@ private extension JSONValue {
   var stringValue: String? {
     guard case let .string(value) = self else { return nil }
     return value
+  }
+}
+
+private extension Array where Element == LLMStreamEvent {
+  var completedResponse: LLMResponse? {
+    compactMap { event -> LLMResponse? in
+      guard case let .completed(response) = event else { return nil }
+      return response
+    }
+    .last
+  }
+
+  var textDeltas: [String] {
+    compactMap { event -> String? in
+      guard case let .textDelta(delta) = event else { return nil }
+      return delta
+    }
+  }
+}
+
+private func lineStream(_ lines: [String]) -> AsyncThrowingStream<String, any Error> {
+  AsyncThrowingStream { continuation in
+    for line in lines {
+      continuation.yield(line)
+    }
+    continuation.finish()
   }
 }

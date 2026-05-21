@@ -15,7 +15,7 @@ The adapter supports:
 - tool choice
 - token usage parsing
 - tool use parsing
-- injectable HTTP transport for tests
+- injectable response and streaming HTTP transport for tests
 
 Apps provide API keys at initialization time and own credential storage.
 
@@ -27,3 +27,4 @@ Apps provide API keys at initialization time and own credential storage.
 - ``AnthropicHTTPTransport``
 - ``AnthropicHTTPRequest``
 - ``AnthropicHTTPResponse``
+- ``AnthropicHTTPStreamResponse``

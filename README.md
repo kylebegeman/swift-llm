@@ -23,8 +23,8 @@ The package is private while it is incubated inside Chime In, but it is structur
 |---|---|
 | `SwiftLLM` | Core client, prompt, context, fallback, validation, retrieval, router, and metadata primitives |
 | `SwiftLLMFoundationModels` | Apple Foundation Models availability, token counting, prewarming, generation, and error normalization |
-| `SwiftLLMOpenAI` | OpenAI Responses API adapter with injectable HTTP transport |
-| `SwiftLLMAnthropic` | Anthropic Messages API adapter with injectable HTTP transport |
+| `SwiftLLMOpenAI` | OpenAI Responses API adapter with injectable response and streaming transport |
+| `SwiftLLMAnthropic` | Anthropic Messages API adapter with injectable response and streaming transport |
 | `SwiftLLMEvaluation` | Lightweight prompt regression and output assertion utilities |
 
 ## Provider-Neutral Usage

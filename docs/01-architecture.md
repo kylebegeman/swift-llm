@@ -105,7 +105,7 @@ It includes:
 - SSE streaming for text deltas where the platform supports streaming URLSession bytes
 - injectable `OpenAIHTTPTransport` for tests and app-specific networking policy
 
-This target does not store API keys. Apps provide credentials at initialization time and own any Keychain, environment, or settings behavior.
+This target does not persist API keys or define credential policy. Apps provide credentials at initialization time and own any Keychain, environment, or settings behavior.
 
 ## `SwiftLLMAnthropic`
 

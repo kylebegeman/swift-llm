@@ -146,7 +146,9 @@ public struct KeywordLocalRetriever: LocalRetriever {
 
   public func retrieve(_ query: LocalRetrievalQuery) async throws -> LocalRetrievalResult {
     let queryTerms = LocalRetrievalScorer.terms(in: query.text)
-    guard query.maxResults > 0, !queryTerms.isEmpty else {
+    guard query.maxResults > 0,
+          !queryTerms.isEmpty || !query.requiredSourceIDs.isEmpty
+    else {
       return LocalRetrievalResult(query: query, snippets: [], sources: [])
     }
 

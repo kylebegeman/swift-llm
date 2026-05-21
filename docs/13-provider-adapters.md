@@ -47,6 +47,8 @@ This keeps app code focused on the thing it is asking the model to do, not the t
 
 The common `respond(to:)` API compiles an `LLMRequest` into the existing Foundation Models request type. Typed guided generation remains available through the Foundation-specific API when Apple's `FoundationModels` framework can be imported.
 
+The provider-neutral Foundation adapter rejects features it cannot honor yet, including tool calls, top-p sampling, and stop sequences. That keeps a request from silently producing different behavior locally than it would with a cloud provider.
+
 This is still the preferred default for offline Apple app flows.
 
 ### OpenAI
@@ -59,6 +61,7 @@ This is still the preferred default for offline Apple app flows.
 - tools become function tools
 - tool choices are encoded as `auto`, `none`, `required`, or named function choice
 - response parsing reads `output_text`, message content, function calls, finish status, and token usage
+- response and streaming transports are injectable
 
 The adapter follows the public OpenAI Responses and Structured Outputs documentation:
 
@@ -75,6 +78,7 @@ The adapter follows the public OpenAI Responses and Structured Outputs documenta
 - tools become Anthropic tool definitions
 - tool choices map to `auto`, `none`, `any`, or a named tool
 - response parsing reads text blocks, tool use blocks, stop reasons, and token usage
+- response and streaming transports are injectable
 
 The adapter follows Anthropic's Messages API documentation:
 
@@ -111,7 +115,7 @@ This is the high-level ergonomic API for app features that should feel the same 
 
 ## Credential Policy
 
-SwiftLLM accepts API keys at initialization time and does not store them.
+SwiftLLM accepts API keys at initialization time and does not persist them or define a credential storage policy.
 
 Apps own:
 
@@ -131,6 +135,7 @@ Provider adapters use injectable HTTP transports. Tests should verify:
 - request shape
 - required headers
 - response parsing
+- streaming event parsing
 - error normalization
 - tool-call conversion
 - token usage conversion
