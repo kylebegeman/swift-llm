@@ -2,7 +2,7 @@
 
 ## Purpose
 
-SwiftLLM is a Swift package for building reliable, local-first language model features on Apple platforms.
+SwiftLLM is a Swift package for building reliable, local-first language model features on Apple platforms, with optional provider-backed generation when an app explicitly configures it.
 
 The goal is not to turn Apple Foundation Models into frontier cloud models. The goal is to apply production AI system techniques around the on-device model so it becomes more useful, more predictable, and easier to ship inside real Apple apps.
 
@@ -17,6 +17,7 @@ Those techniques include:
 - evidence-preserving structured output
 - validation and post-processing
 - fallback ladders
+- provider-neutral request/response routing
 - prompt-version regression reports
 - redacted local-only diagnostics
 
@@ -27,6 +28,8 @@ Apple Foundation Models provide an on-device language model that is strongest at
 The raw framework is intentionally low-level. It gives apps access to sessions, prompts, guided generation, tools, availability checks, guardrails, token counts, and performance instrumentation. It does not give every app a ready-made production reliability layer.
 
 SwiftLLM should become that reliability layer.
+
+For private app work, the same reliability layer is also useful when switching between Foundation Models, OpenAI, and Anthropic. The package now treats provider access as an adapter concern: the core API speaks in messages, tools, schemas, responses, and fallback reasons; each provider target translates that shape into its native HTTP or framework API.
 
 ## Core Thesis
 
@@ -63,8 +66,10 @@ Those needs are app-specific, but the underlying primitives are generic. SwiftLL
 
 | Product | Responsibility |
 |---|---|
-| `SwiftLLM` | app-neutral prompt, context, retrieval, fallback, validation, and metadata primitives |
+| `SwiftLLM` | app-neutral client, prompt, context, retrieval, fallback, validation, router, and metadata primitives |
 | `SwiftLLMFoundationModels` | Apple Foundation Models availability, token counting, generation, defaults, and adapter behavior |
+| `SwiftLLMOpenAI` | OpenAI Responses API adapter |
+| `SwiftLLMAnthropic` | Anthropic Messages API adapter |
 | `SwiftLLMEvaluation` | prompt regression, structured assertions, reports, and local debug bundle utilities |
 
 ## Non-Goals
@@ -76,6 +81,7 @@ SwiftLLM should not:
 - store user prompts or outputs by default
 - hide network calls inside local APIs
 - become a generic multi-provider LangChain clone
+- store API keys or decide credential policy for apps
 - define Chime In's recording/review domain models
 - promise frontier-model reasoning quality
 - bypass Apple safety mechanisms

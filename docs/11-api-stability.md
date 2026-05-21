@@ -44,6 +44,9 @@ They are small value types and already have tests.
 These are useful but should remain easy to revise:
 
 - Foundation Models generation wrappers
+- provider-neutral client request/response types
+- OpenAI and Anthropic adapters
+- router and high-level LLM pipeline
 - structured generation pipeline
 - transcript chunking
 - local RAG pipeline
@@ -57,7 +60,7 @@ They should become stable after Chime In exercises them in real workflows.
 
 These should not be promised publicly until implemented and tested:
 
-- streaming generation
+- advanced streaming fallback
 - tool-call wrappers
 - SQLite/GRDB retrieval adapters
 - embedding-backed retrieval

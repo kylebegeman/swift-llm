@@ -12,12 +12,22 @@ let package = Package(
   products: [
     .library(name: "SwiftLLM", targets: ["SwiftLLM"]),
     .library(name: "SwiftLLMFoundationModels", targets: ["SwiftLLMFoundationModels"]),
+    .library(name: "SwiftLLMOpenAI", targets: ["SwiftLLMOpenAI"]),
+    .library(name: "SwiftLLMAnthropic", targets: ["SwiftLLMAnthropic"]),
     .library(name: "SwiftLLMEvaluation", targets: ["SwiftLLMEvaluation"]),
   ],
   targets: [
     .target(name: "SwiftLLM"),
     .target(
       name: "SwiftLLMFoundationModels",
+      dependencies: ["SwiftLLM"]
+    ),
+    .target(
+      name: "SwiftLLMOpenAI",
+      dependencies: ["SwiftLLM"]
+    ),
+    .target(
+      name: "SwiftLLMAnthropic",
       dependencies: ["SwiftLLM"]
     ),
     .target(
@@ -29,6 +39,8 @@ let package = Package(
       dependencies: [
         "SwiftLLM",
         "SwiftLLMFoundationModels",
+        "SwiftLLMOpenAI",
+        "SwiftLLMAnthropic",
         "SwiftLLMEvaluation",
       ]
     ),

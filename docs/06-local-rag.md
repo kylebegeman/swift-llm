@@ -135,7 +135,7 @@ This means:
 - no external embedding service is required
 - no network access is hidden behind retrieval APIs
 
-If future optional external providers are added, they must be adapters, not core behavior.
+External providers are adapter targets. Retrieval itself should remain local unless an app explicitly builds a different retriever.
 
 ## Community Value
 

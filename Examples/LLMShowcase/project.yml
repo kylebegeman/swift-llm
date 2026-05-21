@@ -36,6 +36,10 @@ targets:
       - package: SwiftLLMPackage
         product: SwiftLLMFoundationModels
       - package: SwiftLLMPackage
+        product: SwiftLLMOpenAI
+      - package: SwiftLLMPackage
+        product: SwiftLLMAnthropic
+      - package: SwiftLLMPackage
         product: SwiftLLMEvaluation
 schemes:
   LLMShowcase:

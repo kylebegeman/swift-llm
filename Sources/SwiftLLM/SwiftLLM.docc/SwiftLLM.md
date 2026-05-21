@@ -13,10 +13,28 @@ Use this product to:
 - split long text and transcript inputs
 - run map/reduce pipelines
 - retrieve and cite local context
+- call provider-neutral clients
+- route across provider fallbacks
 - validate generated evidence
 - describe fallback behavior
 
 ## Topics
+
+### Provider Clients
+
+- ``LLMClient``
+- ``AnyLLMClient``
+- ``LLMRouter``
+- ``LLMRequest``
+- ``LLMResponse``
+- ``LLMMessage``
+- ``LLMResponseFormat``
+- ``LLMJSONSchema``
+- ``LLMToolDefinition``
+- ``LLMToolChoice``
+- ``LLMToolCall``
+- ``LLMPipeline``
+- ``LLMPromptTask``
 
 ### Prompting
 

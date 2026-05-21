@@ -12,6 +12,7 @@ Use this product to:
 - prewarm Foundation Models sessions where available
 - count tokens with the system tokenizer when possible
 - generate strings and guided typed outputs
+- call Foundation Models through the shared `LLMClient` protocol
 - map Foundation Models failures into fallback reasons
 - test unavailable and fake-client paths without importing Foundation Models in the app's core logic
 

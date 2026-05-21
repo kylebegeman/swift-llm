@@ -8,6 +8,8 @@ swift-llm/
 ├── Sources/
 │   ├── SwiftLLM/                    # Core app-neutral primitives
 │   ├── SwiftLLMFoundationModels/    # Apple Foundation Models integration
+│   ├── SwiftLLMOpenAI/              # OpenAI Responses API integration
+│   ├── SwiftLLMAnthropic/           # Anthropic Messages API integration
 │   └── SwiftLLMEvaluation/          # Prompt and output evaluation
 ├── Tests/
 │   └── SwiftLLMTests/
@@ -28,6 +30,12 @@ SwiftLLMFoundationModels
     └── SwiftLLM
     └── FoundationModels when available
 
+SwiftLLMOpenAI
+    └── SwiftLLM
+
+SwiftLLMAnthropic
+    └── SwiftLLM
+
 SwiftLLM
     └── Foundation
 ```
@@ -39,6 +47,8 @@ The core package does not import Foundation Models. That keeps the core abstract
 `SwiftLLM` owns primitives that should be useful even if the model is unavailable:
 
 - provider and run metadata
+- provider-neutral request, response, streaming event, tool, and response-format types
+- `LLMClient`, `AnyLLMClient`, and `LLMRouter`
 - prompt contracts
 - examples and example selection
 - token budgeting
@@ -49,6 +59,7 @@ The core package does not import Foundation Models. That keeps the core abstract
 - source references and citation rendering
 - dependency-free keyword retrieval for tests and demos
 - local RAG pipeline composition
+- high-level prompt/RAG pipeline composition
 - structured generation schemas and contracts
 - evidence sources and spans
 - structured candidate wrappers
@@ -81,6 +92,37 @@ The first adapter slice now includes availability normalization, a token-count A
 
 This target should continue to normalize Foundation Models behavior into core SwiftLLM types instead of leaking every framework detail into app code.
 
+## `SwiftLLMOpenAI`
+
+`SwiftLLMOpenAI` adapts the OpenAI Responses API into the core `LLMClient` protocol.
+
+It includes:
+
+- `OpenAIClient`
+- request translation from `LLMRequest`
+- text, JSON object, JSON schema, tool definition, and tool choice encoding
+- response parsing for `output_text`, message content, function calls, and token usage
+- SSE streaming for text deltas where the platform supports streaming URLSession bytes
+- injectable `OpenAIHTTPTransport` for tests and app-specific networking policy
+
+This target does not store API keys. Apps provide credentials at initialization time and own any Keychain, environment, or settings behavior.
+
+## `SwiftLLMAnthropic`
+
+`SwiftLLMAnthropic` adapts the Anthropic Messages API into the core `LLMClient` protocol.
+
+It includes:
+
+- `AnthropicClient`
+- system/developer instruction folding into Anthropic `system`
+- user/assistant message translation
+- tool definition and tool choice encoding
+- response parsing for text blocks, tool use blocks, stop reasons, and token usage
+- SSE streaming for text deltas where the platform supports streaming URLSession bytes
+- injectable `AnthropicHTTPTransport` for tests and app-specific networking policy
+
+This target is intentionally parallel to the OpenAI adapter so provider behavior stays visible instead of becoming a hidden abstraction layer.
+
 ## `SwiftLLMEvaluation`
 
 `SwiftLLMEvaluation` owns test and QA primitives:
@@ -99,6 +141,7 @@ The first evaluation slice includes text assertions, structured output assertion
 `Examples/LLMShowcase` is generated with XcodeGen. It should demonstrate package primitives in small, inspectable workflows:
 
 - model availability
+- provider metadata and routing options
 - context budget visualization
 - prompt contract previews
 - chunking previews

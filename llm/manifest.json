@@ -5,6 +5,7 @@
   "preferredReadOrder": [
     "docs/README.md",
     "llm/capabilities/repo-map.md",
+    "docs/13-provider-adapters.md",
     "llm/capabilities/foundation-models-wrapper.md",
     "llm/capabilities/reliability-patterns.md",
     "llm/capabilities/chime-in-incubation.md"
@@ -30,6 +31,13 @@
       "kind": "capability",
       "summary": "Foundation Models constraints and wrapper responsibilities.",
       "keywords": ["FoundationModels", "availability", "guided generation", "tools"]
+    },
+    {
+      "id": "provider-adapters",
+      "path": "docs/13-provider-adapters.md",
+      "kind": "guide",
+      "summary": "Provider-neutral client API plus Foundation Models, OpenAI, and Anthropic adapter behavior.",
+      "keywords": ["providers", "OpenAI", "Anthropic", "LLMClient", "router"]
     },
     {
       "id": "reliability-patterns",

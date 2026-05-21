@@ -7,9 +7,11 @@ public enum LLMPrivacyMode: String, Equatable, Sendable {
 }
 
 public enum LLMProviderKind: String, Equatable, Sendable {
+  case anthropic
   case appleFoundationModels
   case deterministicLocal
   case external
+  case openAI
   case testDouble
 }
 

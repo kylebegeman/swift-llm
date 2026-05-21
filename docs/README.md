@@ -15,6 +15,9 @@ Start here for the durable, human-oriented explanation of SwiftLLM.
 9. `08-chime-in-incubation.md`
 10. `09-roadmap.md`
 11. `10-open-source-readiness.md`
+12. `11-api-stability.md`
+13. `12-release-process.md`
+14. `13-provider-adapters.md`
 
 If you are an agent or want the cheapest route to the right files, use [`../llm/START_HERE.md`](../llm/START_HERE.md).
 
@@ -39,3 +42,6 @@ Temporary notes live in [`../scratch/`](../scratch/). Scratch files are expendab
 | `08-chime-in-incubation.md` | how Chime In should consume and pressure-test the package |
 | `09-roadmap.md` | phased implementation plan |
 | `10-open-source-readiness.md` | publication criteria, licensing, API stability, and repo hygiene |
+| `11-api-stability.md` | pre-1.0 API stability policy |
+| `12-release-process.md` | release branch and tagging process |
+| `13-provider-adapters.md` | provider-neutral client API plus Foundation Models, OpenAI, and Anthropic adapter behavior |

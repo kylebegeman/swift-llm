@@ -115,7 +115,31 @@ Acceptance criteria:
 
 Remaining refinements can happen in later phases: first-class safety probe models, richer structured assertion helpers, file-writing helpers with explicit redaction policy, report diffing, JUnit/CI output, and DocC examples.
 
-## Phase 6: Open Source Preparation
+## Phase 6: Provider-Neutral Client Layer
+
+Status: completed for the first private adapter slice.
+
+Add Swift-native provider access that can support local Foundation Models plus explicitly configured external providers:
+
+- provider-neutral `LLMClient` protocol: implemented
+- `LLMRequest`, `LLMResponse`, `LLMMessage`, response formats, tools, tool calls, streaming events, and normalized client errors: implemented
+- type-erased `AnyLLMClient`: implemented
+- fallback `LLMRouter`: implemented for non-streaming responses
+- high-level `LLMPipeline` over prompt contracts and optional local RAG: implemented
+- Foundation Models conformance to `LLMClient`: implemented
+- OpenAI Responses API adapter: implemented
+- Anthropic Messages API adapter: implemented
+- injectable HTTP transports for provider tests: implemented
+
+Acceptance criteria:
+
+- A Swift app can initialize Foundation Models, OpenAI, Anthropic, or a router from the same core API.
+- Provider adapter tests do not require real API keys or network calls.
+- API key storage remains an app concern.
+
+Remaining refinements can happen in later phases: richer streaming fallback semantics, provider capability negotiation, provider-specific structured output affordances, stricter schema validation, request/response trace redaction, and retry/backoff policy hooks.
+
+## Phase 7: Open Source Preparation
 
 Before public release:
 

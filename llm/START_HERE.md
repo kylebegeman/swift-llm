@@ -11,6 +11,8 @@ Read this before working in SwiftLLM. It gives the shortest route to the relevan
 - Public products:
   - `SwiftLLM`
   - `SwiftLLMFoundationModels`
+  - `SwiftLLMOpenAI`
+  - `SwiftLLMAnthropic`
   - `SwiftLLMEvaluation`
 - Primary language: Swift 6.2.
 - Platforms: iOS 26, macOS 26, visionOS 26.
@@ -23,10 +25,11 @@ Read this before working in SwiftLLM. It gives the shortest route to the relevan
 
 1. `../docs/README.md`
 2. `capabilities/repo-map.md`
-3. `capabilities/foundation-models-wrapper.md`
-4. `capabilities/reliability-patterns.md`
-5. `capabilities/chime-in-incubation.md` when work is driven by Chime In
-6. One focused playbook based on the task
+3. `../docs/13-provider-adapters.md` for provider-neutral client work
+4. `capabilities/foundation-models-wrapper.md`
+5. `capabilities/reliability-patterns.md`
+6. `capabilities/chime-in-incubation.md` when work is driven by Chime In
+7. One focused playbook based on the task
 
 ## Recommended Playbooks
 
@@ -44,6 +47,8 @@ Read this before working in SwiftLLM. It gives the shortest route to the relevan
 - `Package.swift`
 - `Sources/SwiftLLM/`
 - `Sources/SwiftLLMFoundationModels/`
+- `Sources/SwiftLLMOpenAI/`
+- `Sources/SwiftLLMAnthropic/`
 - `Sources/SwiftLLMEvaluation/`
 - `Tests/SwiftLLMTests/`
 - `Examples/LLMShowcase/project.yml`
@@ -59,6 +64,6 @@ Read this before working in SwiftLLM. It gives the shortest route to the relevan
 
 ## Escalate To Code When
 
-- you know whether the change belongs in core, Foundation Models integration, evaluation, or the showcase
+- you know whether the change belongs in core, a provider adapter, evaluation, or the showcase
 - you know whether a Chime In-driven idea is app-specific or package-general
 - a doc or playbook points to a specific target or file

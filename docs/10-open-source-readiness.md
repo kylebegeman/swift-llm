@@ -48,6 +48,8 @@ Public product names:
 
 - `SwiftLLM`
 - `SwiftLLMFoundationModels`
+- `SwiftLLMOpenAI`
+- `SwiftLLMAnthropic`
 - `SwiftLLMEvaluation`
 
 Future product names should stay short and explicit.

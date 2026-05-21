@@ -1,12 +1,34 @@
 import SwiftLLM
+import SwiftLLMAnthropic
 import SwiftLLMEvaluation
 import SwiftLLMFoundationModels
+import SwiftLLMOpenAI
 import SwiftUI
 
 struct ShowcaseView: View {
   @State private var ragResult: LocalRAGResult?
 
   private let modelAvailability = FoundationModelClient.live.availability()
+  private let providerRows = [
+    ProviderRow(
+      name: FoundationModelClient.live.metadata.providerDisplayName,
+      model: FoundationModelDefaults.metadata().modelIdentifier ?? "SystemLanguageModel.default",
+      privacy: "Local only",
+      role: "Default offline route"
+    ),
+    ProviderRow(
+      name: OpenAIClient(apiKey: "provided-at-runtime", model: "configured-openai-model").metadata.providerDisplayName,
+      model: "configured-openai-model",
+      privacy: "External opt-in",
+      role: "Optional cloud fallback"
+    ),
+    ProviderRow(
+      name: AnthropicClient(apiKey: "provided-at-runtime", model: "configured-anthropic-model").metadata.providerDisplayName,
+      model: "configured-anthropic-model",
+      privacy: "External opt-in",
+      role: "Optional cloud fallback"
+    ),
+  ]
   private let sampleSchema = StructuredGenerationSchema(
     id: "review-draft",
     name: "Review draft",
@@ -99,6 +121,26 @@ struct ShowcaseView: View {
           LabeledContent("Default context", value: "\(FoundationModelDefaults.contextWindowTokens) tokens")
           LabeledContent("Availability", value: modelAvailability.diagnosticMessage)
           LabeledContent("Privacy", value: "Local only")
+        }
+
+        Section("Provider Routing") {
+          ForEach(providerRows) { provider in
+            VStack(alignment: .leading, spacing: 6) {
+              HStack {
+                Text(provider.name)
+                Spacer()
+                Text(provider.privacy)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              Text(provider.model)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+              Text(provider.role)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            }
+          }
         }
 
         Section("Context") {
@@ -198,4 +240,12 @@ struct ShowcaseView: View {
       )
     )
   }
+}
+
+private struct ProviderRow: Identifiable {
+  var id: String { name }
+  var name: String
+  var model: String
+  var privacy: String
+  var role: String
 }

@@ -20,6 +20,9 @@ Read [`llm/START_HERE.md`](llm/START_HERE.md) before scanning source.
   - `llm/capabilities/foundation-models-wrapper.md`
   - `docs/02-foundation-models-reference.md`
   - `docs/03-reliability-patterns.md`
+- If the task is about OpenAI, Anthropic, provider-neutral requests, routing, streaming, tools, or API-key boundaries, read:
+  - `docs/13-provider-adapters.md`
+  - `llm/capabilities/repo-map.md`
 - If the task is about Chime In adoption, transcript extraction, or incubation scope, read:
   - `llm/capabilities/chime-in-incubation.md`
   - `docs/08-chime-in-incubation.md`

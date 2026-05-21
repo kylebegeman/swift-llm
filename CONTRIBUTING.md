@@ -22,8 +22,10 @@ xcodegen generate --spec Examples/LLMShowcase/project.yml
 
 - Keep `SwiftLLM` free of app-specific concepts.
 - Keep `SwiftLLMFoundationModels` as the only target that imports `FoundationModels`.
+- Keep provider HTTP translation inside provider adapter targets.
+- Do not add API key persistence or credential policy to the package; apps own that boundary.
 - Add evaluation coverage when changing prompt contracts, validators, chunking, or fallback behavior.
-- Do not add networking, telemetry, or external-provider behavior without explicit design docs.
+- Do not add telemetry or new external-provider behavior without explicit design docs.
 - Do not commit generated `.xcodeproj` files or local build artifacts.
 
 ## Documentation Rules

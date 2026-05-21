@@ -357,6 +357,57 @@ public struct FoundationModelClient: Sendable {
   }()
 }
 
+extension FoundationModelClient: LLMClient {
+  public var metadata: LLMProviderMetadata {
+    FoundationModelDefaults.metadata()
+  }
+
+  public func respond(to request: LLMRequest) async throws -> LLMResponse {
+    let prompt = CompiledPrompt(
+      contract: PromptContract(
+        id: request.metadata["promptID"] ?? "llm-request",
+        version: request.metadata["promptVersion"] ?? metadata.promptVersion,
+        instructions: Self.instructions(for: request),
+        responseSchemaDescription: request.responseFormat.foundationPromptDescription ?? ""
+      ),
+      metadata: metadata,
+      userPrompt: request.messages.foundationUserPrompt
+    )
+    let response = try await respond(
+      FoundationModelGenerationRequest(
+        prompt: prompt,
+        options: FoundationModelGenerationOptions(
+          sampling: request.parameters.temperature == 0 ? .greedy : .systemDefault,
+          temperature: request.parameters.temperature,
+          maximumResponseTokens: request.parameters.maxOutputTokens,
+          includeSchemaInPrompt: true
+        )
+      )
+    )
+
+    return LLMResponse(
+      text: response.content,
+      finishReason: .stop,
+      tokenUsage: response.tokenUsage,
+      model: response.metadata.modelIdentifier,
+      metadata: response.metadata
+    )
+  }
+
+  private static func instructions(for request: LLMRequest) -> String {
+    let roleInstructions = request.messages
+      .filter { $0.role == .system || $0.role == .developer }
+      .map(\.content)
+      .joined(separator: "\n\n")
+    return [request.instructions, roleInstructions, request.responseFormat.foundationPromptDescription]
+      .compactMap { text in
+        guard let text, !text.isEmpty else { return nil }
+        return text
+      }
+      .joined(separator: "\n\n")
+  }
+}
+
 public enum FoundationModelErrorNormalizer {
   public static func failure(from error: any Error) -> FoundationModelFailure {
     if let failure = error as? FoundationModelFailure {
@@ -381,6 +432,54 @@ public enum FoundationModelErrorNormalizer {
       reason: .providerError,
       debugDescription: error.localizedDescription
     )
+  }
+}
+
+private extension Array where Element == LLMMessage {
+  var foundationUserPrompt: String {
+    filter { $0.role != .system && $0.role != .developer }
+      .map { message in
+        switch message.role {
+        case .assistant:
+          return "Assistant:\n\(message.content)"
+        case .tool:
+          return "Tool result\(message.toolCallID.map { " \($0)" } ?? ""):\n\(message.content)"
+        case .user:
+          return message.content
+        case .developer, .system:
+          return message.content
+        }
+      }
+      .joined(separator: "\n\n")
+  }
+}
+
+private extension LLMResponseFormat {
+  var foundationPromptDescription: String? {
+    switch self {
+    case .text:
+      return nil
+    case .jsonObject:
+      return "Return only valid JSON."
+    case let .jsonSchema(schema):
+      let encodedSchema = (try? JSONEncoder.foundationPromptEncoder.encode(schema.schema))
+        .map { String(decoding: $0, as: UTF8.self) }
+        ?? "{}"
+      return """
+      Return only valid JSON matching this schema.
+      Schema name: \(schema.name)
+      \(schema.description.map { "Description: \($0)\n" } ?? "")Schema:
+      \(encodedSchema)
+      """
+    }
+  }
+}
+
+private extension JSONEncoder {
+  static var foundationPromptEncoder: JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    return encoder
   }
 }
 
