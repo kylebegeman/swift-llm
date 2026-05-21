@@ -16,7 +16,7 @@ Those techniques include:
 - typed guided generation
 - evidence-preserving structured output
 - validation and post-processing
-- fallback ladders
+- capability-aware fallback ladders
 - provider-neutral request/response routing
 - prompt-version regression reports
 - redacted local-only diagnostics
@@ -96,8 +96,9 @@ The package is succeeding when a developer can:
 4. Generate structured output.
 5. Validate and ground the result.
 6. Fall back when the model is unavailable or wrong.
-7. Run a local evaluation corpus after prompt or OS/model changes.
-8. Inspect local diagnostics without shipping user data anywhere.
+7. Skip providers that cannot honor required request capabilities.
+8. Run a local evaluation corpus after prompt or OS/model changes.
+9. Inspect local diagnostics without shipping user data anywhere.
 
 ## Design Tone
 

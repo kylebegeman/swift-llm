@@ -13,6 +13,7 @@ The adapter supports:
 - JSON response-format instructions
 - tool definitions
 - tool choice
+- native tool-use and tool-result history
 - token usage parsing
 - tool use parsing
 - injectable response and streaming HTTP transport for tests

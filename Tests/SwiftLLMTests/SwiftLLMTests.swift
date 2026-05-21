@@ -282,6 +282,49 @@ struct SwiftLLMTests {
   }
 
   @Test
+  func requestCapabilitiesReflectRequiredProviderFeatures() {
+    let request = LLMRequest(
+      messages: [
+        .assistant(
+          "",
+          toolCalls: [
+            LLMToolCall(id: "call_1", name: "lookup", argumentsJSON: "{}"),
+          ]
+        ),
+        .tool("{}", toolCallID: "call_1"),
+      ],
+      responseFormat: .jsonSchema(
+        LLMJSONSchema(name: "result", schema: ["type": "object"])
+      ),
+      tools: [
+        LLMToolDefinition(
+          name: "lookup",
+          description: "Lookup data.",
+          inputSchema: ["type": "object"]
+        ),
+      ],
+      toolChoice: .required,
+      parameters: LLMGenerationParameters(
+        temperature: 0.2,
+        topP: 0.9,
+        stopSequences: ["END"]
+      )
+    )
+
+    #expect(
+      request.requiredCapabilities(streaming: true) == [
+        .jsonSchemaResponse,
+        .stopSequences,
+        .streaming,
+        .temperature,
+        .toolResults,
+        .tools,
+        .topP,
+      ]
+    )
+  }
+
+  @Test
   func foundationModelFakeClientCanExerciseGenerationWithoutFramework() async throws {
     let metadata = FoundationModelDefaults.metadata(promptVersion: "test-v1")
     let contract = PromptContract(

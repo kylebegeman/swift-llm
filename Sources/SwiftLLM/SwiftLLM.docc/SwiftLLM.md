@@ -14,7 +14,7 @@ Use this product to:
 - run map/reduce pipelines
 - retrieve and cite local context
 - call provider-neutral clients
-- route across provider fallbacks
+- route across provider fallbacks with capability checks
 - validate generated evidence
 - describe fallback behavior
 
@@ -25,6 +25,10 @@ Use this product to:
 - ``LLMClient``
 - ``AnyLLMClient``
 - ``LLMRouter``
+- ``LLMClientCapabilities``
+- ``LLMCapability``
+- ``LLMRouterFallbackPolicy``
+- ``LLMStreamFallbackMode``
 - ``LLMRequest``
 - ``LLMResponse``
 - ``LLMMessage``

@@ -11,8 +11,13 @@ public enum FallbackReason: Equatable, Sendable {
   case guardrailViolation
   case rateLimited
   case refusal
+  case unsupported
   case validationFailed
   case providerError(String)
+}
+
+public protocol LLMFallbackClassifiableError: Error, Sendable {
+  var fallbackReason: FallbackReason { get }
 }
 
 public struct FallbackDecision<Output: Sendable>: Sendable {

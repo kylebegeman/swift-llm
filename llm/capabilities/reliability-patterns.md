@@ -39,6 +39,8 @@ input
 - `KeywordLocalRetriever`
 - `CitationContextRenderer`
 - `LocalRAGPipeline`
+- `LLMClientCapabilities`
+- `LLMRouterFallbackPolicy`
 - `MapReducePipeline`
 - `MergePolicy`
 - `GroundingValidator`

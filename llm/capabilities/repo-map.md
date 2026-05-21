@@ -18,6 +18,7 @@ Use this card when deciding where a new API, test, doc, or showcase change belon
 ## Ownership Rules
 
 - Put app-neutral value types in `SwiftLLM`.
+- Put provider-neutral capabilities, routing policy, and fallback behavior in `SwiftLLM`.
 - Put anything importing `FoundationModels` in `SwiftLLMFoundationModels`.
 - Put OpenAI HTTP translation in `SwiftLLMOpenAI`.
 - Put Anthropic HTTP translation in `SwiftLLMAnthropic`.

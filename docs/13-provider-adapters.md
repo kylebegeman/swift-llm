@@ -17,6 +17,7 @@ Provider-neutral usage starts with `LLMClient`:
 
 ```swift
 public protocol LLMClient: Sendable {
+  var capabilities: LLMClientCapabilities { get }
   var metadata: LLMProviderMetadata { get }
 
   func respond(to request: LLMRequest) async throws -> LLMResponse
@@ -36,8 +37,11 @@ The core request model includes:
 - `LLMResponse`
 - `LLMToolCall`
 - `LLMClientError`
+- `LLMClientCapabilities`
 
 This keeps app code focused on the thing it is asking the model to do, not the transport shape for a particular provider.
+
+Capability negotiation is intentionally explicit. Adapters publish support for tools, tool results, response formats, sampling options, stop sequences, native JSON schema support, streaming, and context windows where known. `LLMRouter` uses those capabilities before dispatch so a request that requires tools can skip a local adapter that cannot honor them.
 
 ## Provider Targets
 
@@ -60,6 +64,7 @@ This is still the preferred default for offline Apple app flows.
 - `.jsonObject` and `.jsonSchema` become `text.format`
 - tools become function tools
 - tool choices are encoded as `auto`, `none`, `required`, or named function choice
+- assistant tool calls and tool-result messages become native `function_call` and `function_call_output` input items
 - response parsing reads `output_text`, message content, function calls, finish status, and token usage
 - response and streaming transports are injectable
 
@@ -77,6 +82,7 @@ The adapter follows the public OpenAI Responses and Structured Outputs documenta
 - response format constraints are appended to system instructions
 - tools become Anthropic tool definitions
 - tool choices map to `auto`, `none`, `any`, or a named tool
+- assistant tool calls and tool-result messages become native `tool_use` and `tool_result` content blocks
 - response parsing reads text blocks, tool use blocks, stop reasons, and token usage
 - response and streaming transports are injectable
 
@@ -85,7 +91,7 @@ The adapter follows Anthropic's Messages API documentation:
 - https://docs.anthropic.com/en/api/messages
 - https://docs.anthropic.com/en/api/messages-examples
 
-## Routing
+## Routing And Fallback
 
 `LLMRouter` lets an app express a fallback ladder:
 
@@ -99,7 +105,21 @@ let client = LLMRouter(
 )
 ```
 
-The first implementation retries `respond(to:)` across providers. Streaming currently delegates to the primary provider because mid-stream fallback has tricky UX and state semantics.
+Routing is capability-aware. Before calling a provider, the router checks whether the request requires unsupported features such as tool calling, tool results, top-p sampling, stop sequences, JSON response formats, or streaming.
+
+The default fallback policy retries only failures that are reasonable to recover from by trying another provider:
+
+- unavailable providers
+- rate limits
+- exceeded context windows
+- unsupported capabilities
+- unsupported local model guides or locales
+- unavailable local model assets
+- concurrent local model requests
+
+The default policy does not retry bad requests, authentication failures, guardrail/refusal failures, decoding bugs, validation failures, cancellations, or unknown provider errors. Apps can opt into `.always`, `.never`, or a custom `LLMRouterFallbackPolicy`.
+
+Streaming uses `LLMStreamFallbackMode.beforeFirstOutput` by default. If a provider fails before yielding text, tool calls, or a completion event, the router can continue with a fallback provider. Once output starts, the stream fails rather than silently splicing two providers into one partial response.
 
 ## Prompt/RAG Pipeline
 
@@ -138,6 +158,8 @@ Provider adapters use injectable HTTP transports. Tests should verify:
 - streaming event parsing
 - error normalization
 - tool-call conversion
+- native tool-result conversion
+- capability-based routing behavior
 - token usage conversion
 
 Tests should not call real provider APIs by default.

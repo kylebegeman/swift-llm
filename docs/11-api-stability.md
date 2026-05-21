@@ -46,6 +46,7 @@ These are useful but should remain easy to revise:
 - Foundation Models generation wrappers
 - provider-neutral client request/response types
 - OpenAI and Anthropic adapters
+- provider capabilities and router fallback policy
 - router and high-level LLM pipeline
 - structured generation pipeline
 - transcript chunking
@@ -60,8 +61,8 @@ They should become stable after Chime In exercises them in real workflows.
 
 These should not be promised publicly until implemented and tested:
 
-- advanced streaming fallback
-- tool-call wrappers
+- provider retry/backoff policy hooks
+- Foundation Models tool-call wrappers
 - SQLite/GRDB retrieval adapters
 - embedding-backed retrieval
 - automatic repair loops

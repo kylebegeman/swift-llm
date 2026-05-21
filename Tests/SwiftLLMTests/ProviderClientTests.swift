@@ -111,6 +111,7 @@ struct ProviderClientTests {
     #expect(body["tool_choice"]?.objectValue?["name"] == "lookup_note")
     #expect(response.text == "Hello from OpenAI.")
     #expect(response.toolCalls.first?.name == "lookup_note")
+    #expect(response.message.toolCalls.first?.id == "call_1")
     #expect(response.tokenUsage?.measuredInputTokens == 12)
     #expect(response.metadata.providerKind == .openAI)
     #expect(response.metadata.promptVersion == "summary-v3")
@@ -162,6 +163,62 @@ struct ProviderClientTests {
     #expect(events.completedResponse?.text == "Hello stream")
     #expect(events.completedResponse?.metadata.promptVersion == "stream-v1")
     #expect(events.completedResponse?.tokenUsage?.measuredOutputTokens == 2)
+  }
+
+  @Test
+  func openAIClientEncodesNativeToolHistory() async throws {
+    let capture = RequestCapture<OpenAIHTTPRequest>()
+    let client = OpenAIClient(
+      apiKey: "test-key",
+      model: "gpt-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: OpenAIHTTPTransport { request in
+        await capture.record(request)
+        return OpenAIHTTPResponse(
+          statusCode: 200,
+          body: Data(
+            """
+            {
+              "id": "resp_tool",
+              "model": "gpt-test",
+              "status": "completed",
+              "output_text": "Tool result accepted."
+            }
+            """.utf8
+          )
+        )
+      }
+    )
+
+    _ = try await client.respond(
+      to: LLMRequest(
+        messages: [
+          .user("Look up note 1."),
+          .assistant(
+            "",
+            toolCalls: [
+              LLMToolCall(
+                id: "call_1",
+                name: "lookup_note",
+                argumentsJSON: #"{"id":"1"}"#
+              ),
+            ]
+          ),
+          .tool(#"{"title":"Private note"}"#, toolCallID: "call_1"),
+        ]
+      )
+    )
+
+    let body = try #require(await capture.value()).jsonObject()
+    let input = try #require(body["input"]?.arrayValue)
+
+    #expect(input[0].objectValue?["role"] == "user")
+    #expect(input[1].objectValue?["type"] == "function_call")
+    #expect(input[1].objectValue?["call_id"] == "call_1")
+    #expect(input[1].objectValue?["arguments"] == #"{"id":"1"}"#)
+    #expect(input[2].objectValue?["type"] == "function_call_output")
+    #expect(input[2].objectValue?["call_id"] == "call_1")
+    #expect(input[2].objectValue?["output"] == #"{"title":"Private note"}"#)
   }
 
   @Test
@@ -252,6 +309,7 @@ struct ProviderClientTests {
     #expect(body["tool_choice"]?.objectValue?["type"] == "any")
     #expect(response.text == "Hello from Claude.")
     #expect(response.toolCalls.first?.name == "lookup_note")
+    #expect(response.message.toolCalls.first?.id == "toolu_1")
     #expect(response.tokenUsage?.measuredOutputTokens == 5)
     #expect(response.metadata.providerKind == .anthropic)
     #expect(response.metadata.promptVersion == "summary-v4")
@@ -305,6 +363,78 @@ struct ProviderClientTests {
   }
 
   @Test
+  func anthropicClientEncodesNativeToolHistory() async throws {
+    let capture = RequestCapture<AnthropicHTTPRequest>()
+    let client = AnthropicClient(
+      apiKey: "test-key",
+      model: "claude-test",
+      baseURL: URL(string: "https://example.test/v1")!,
+      transport: AnthropicHTTPTransport { request in
+        await capture.record(request)
+        return AnthropicHTTPResponse(
+          statusCode: 200,
+          body: Data(
+            """
+            {
+              "id": "msg_tool",
+              "type": "message",
+              "role": "assistant",
+              "model": "claude-test",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Tool result accepted."
+                }
+              ],
+              "stop_reason": "end_turn",
+              "usage": {
+                "input_tokens": 4,
+                "output_tokens": 3
+              }
+            }
+            """.utf8
+          )
+        )
+      }
+    )
+
+    _ = try await client.respond(
+      to: LLMRequest(
+        messages: [
+          .user("Look up note 1."),
+          .assistant(
+            "",
+            toolCalls: [
+              LLMToolCall(
+                id: "toolu_1",
+                name: "lookup_note",
+                argumentsJSON: #"{"id":"1"}"#
+              ),
+            ]
+          ),
+          .tool("Not found", toolCallID: "toolu_1", isError: true),
+          .user("Continue with what you know."),
+        ]
+      )
+    )
+
+    let body = try #require(await capture.value()).jsonObject()
+    let messages = try #require(body["messages"]?.arrayValue)
+    let assistantContent = try #require(messages[1].objectValue?["content"]?.arrayValue)
+    let toolResultContent = try #require(messages[2].objectValue?["content"]?.arrayValue)
+
+    #expect(messages[1].objectValue?["role"] == "assistant")
+    #expect(assistantContent.first?.objectValue?["type"] == "tool_use")
+    #expect(assistantContent.first?.objectValue?["id"] == "toolu_1")
+    #expect(assistantContent.first?.objectValue?["input"]?.objectValue?["id"] == "1")
+    #expect(messages[2].objectValue?["role"] == "user")
+    #expect(toolResultContent[0].objectValue?["type"] == "tool_result")
+    #expect(toolResultContent[0].objectValue?["tool_use_id"] == "toolu_1")
+    #expect(toolResultContent[0].objectValue?["is_error"]?.boolValue == true)
+    #expect(toolResultContent[1].objectValue?["text"] == "Continue with what you know.")
+  }
+
+  @Test
   func routerFallsBackWhenPrimaryClientThrows() async throws {
     let failingMetadata = LLMProviderMetadata(
       modelIdentifier: "primary",
@@ -327,6 +457,137 @@ struct ProviderClientTests {
 
     #expect(response.text == "Fallback handled offline work")
     #expect(response.metadata.providerKind == .testDouble)
+  }
+
+  @Test
+  func routerDoesNotFallbackForBadRequestsByDefault() async throws {
+    let fallback = AnyLLMClient.testDouble { _ in
+      Issue.record("Fallback should not run for bad requests.")
+      return "unexpected"
+    }
+    let router = LLMRouter(
+      primary: AnyLLMClient(metadata: Self.metadata(name: "Primary")) { _ in
+        throw LLMClientError(reason: .badRequest)
+      },
+      fallbacks: [fallback]
+    )
+
+    do {
+      _ = try await router.respond(to: LLMRequest(messages: [.user("Bad request")]))
+      Issue.record("Expected the router to preserve the bad request error.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .badRequest)
+    }
+  }
+
+  @Test
+  func routerUsesCapabilitiesToSkipIncompatibleProviders() async throws {
+    let primary = AnyLLMClient(
+      metadata: Self.metadata(name: "Local"),
+      capabilities: LLMClientCapabilities(
+        supportedFeatures: [.jsonObjectResponse, .jsonSchemaResponse, .streaming, .temperature]
+      )
+    ) { _ in
+      Issue.record("Router should not call a provider that lacks required tool support.")
+      return LLMResponse(text: "unexpected", metadata: Self.metadata(name: "Local"))
+    }
+    let router = LLMRouter(
+      primary: primary,
+      fallbacks: [
+        .testDouble { _ in "Tool-capable fallback" },
+      ]
+    )
+
+    let response = try await router.respond(
+      to: LLMRequest(
+        messages: [.user("Use a tool.")],
+        tools: [
+          LLMToolDefinition(
+            name: "lookup_note",
+            description: "Look up a note.",
+            inputSchema: ["type": "object"]
+          ),
+        ],
+        toolChoice: .required
+      )
+    )
+
+    #expect(response.text == "Tool-capable fallback")
+  }
+
+  @Test
+  func routerStreamsFromFallbackWhenPrimaryFailsBeforeOutput() async throws {
+    let primary = AnyLLMClient(
+      metadata: Self.metadata(name: "Primary"),
+      respond: { _ in
+        throw LLMClientError(reason: .unavailable)
+      },
+      stream: { _ in
+        AsyncThrowingStream { continuation in
+          continuation.yield(.started(Self.metadata(name: "Primary")))
+          continuation.finish(throwing: LLMClientError(reason: .unavailable))
+        }
+      }
+    )
+    let fallback = AnyLLMClient(
+      metadata: Self.metadata(name: "Fallback", providerKind: .testDouble),
+      respond: { _ in
+        LLMResponse(text: "Fallback stream", metadata: Self.metadata(name: "Fallback", providerKind: .testDouble))
+      },
+      stream: { _ in
+        AsyncThrowingStream { continuation in
+          let metadata = Self.metadata(name: "Fallback", providerKind: .testDouble)
+          continuation.yield(.started(metadata))
+          continuation.yield(.textDelta("Fallback stream"))
+          continuation.yield(.completed(LLMResponse(text: "Fallback stream", metadata: metadata)))
+          continuation.finish()
+        }
+      }
+    )
+    let router = LLMRouter(primary: primary, fallbacks: [fallback])
+
+    var events: [LLMStreamEvent] = []
+    for try await event in router.stream(to: LLMRequest(messages: [.user("Stream.")])) {
+      events.append(event)
+    }
+
+    #expect(events.startedProviders == [.external, .testDouble])
+    #expect(events.textDeltas == ["Fallback stream"])
+    #expect(events.completedResponse?.metadata.providerKind == .testDouble)
+  }
+
+  @Test
+  func routerDoesNotStreamFallbackAfterOutputStarts() async throws {
+    let primary = AnyLLMClient(
+      metadata: Self.metadata(name: "Primary"),
+      respond: { _ in
+        throw LLMClientError(reason: .unavailable)
+      },
+      stream: { _ in
+        AsyncThrowingStream { continuation in
+          continuation.yield(.started(Self.metadata(name: "Primary")))
+          continuation.yield(.textDelta("partial"))
+          continuation.finish(throwing: LLMClientError(reason: .unavailable))
+        }
+      }
+    )
+    let fallback = AnyLLMClient.testDouble { _ in
+      Issue.record("Fallback should not run after output has started.")
+      return "unexpected"
+    }
+    let router = LLMRouter(primary: primary, fallbacks: [fallback])
+
+    var events: [LLMStreamEvent] = []
+    do {
+      for try await event in router.stream(to: LLMRequest(messages: [.user("Stream.")])) {
+        events.append(event)
+      }
+      Issue.record("Expected stream to fail without fallback after output started.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .unavailable)
+    }
+
+    #expect(events.textDeltas == ["partial"])
   }
 
   @Test
@@ -458,71 +719,16 @@ struct ProviderClientTests {
       Issue.record("Expected LLMClientError, got \(error).")
     }
   }
-}
 
-private actor RequestCapture<Request: Sendable> {
-  private var request: Request?
-
-  func record(_ request: Request) {
-    self.request = request
-  }
-
-  func value() -> Request? {
-    request
-  }
-}
-
-private extension OpenAIHTTPRequest {
-  func jsonObject() throws -> [String: JSONValue] {
-    try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
-  }
-}
-
-private extension AnthropicHTTPRequest {
-  func jsonObject() throws -> [String: JSONValue] {
-    try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
-  }
-}
-
-private extension JSONValue {
-  var arrayValue: [JSONValue]? {
-    guard case let .array(value) = self else { return nil }
-    return value
-  }
-
-  var objectValue: [String: JSONValue]? {
-    guard case let .object(value) = self else { return nil }
-    return value
-  }
-
-  var stringValue: String? {
-    guard case let .string(value) = self else { return nil }
-    return value
-  }
-}
-
-private extension Array where Element == LLMStreamEvent {
-  var completedResponse: LLMResponse? {
-    compactMap { event -> LLMResponse? in
-      guard case let .completed(response) = event else { return nil }
-      return response
-    }
-    .last
-  }
-
-  var textDeltas: [String] {
-    compactMap { event -> String? in
-      guard case let .textDelta(delta) = event else { return nil }
-      return delta
-    }
-  }
-}
-
-private func lineStream(_ lines: [String]) -> AsyncThrowingStream<String, any Error> {
-  AsyncThrowingStream { continuation in
-    for line in lines {
-      continuation.yield(line)
-    }
-    continuation.finish()
+  private static func metadata(
+    name: String,
+    providerKind: LLMProviderKind = .external
+  ) -> LLMProviderMetadata {
+    LLMProviderMetadata(
+      privacyMode: .externalOptIn,
+      promptVersion: "test-v1",
+      providerDisplayName: name,
+      providerKind: providerKind
+    )
   }
 }

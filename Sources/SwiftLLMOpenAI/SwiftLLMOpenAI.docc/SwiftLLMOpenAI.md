@@ -12,6 +12,7 @@ The adapter supports:
 - JSON object and JSON schema response formats
 - function tool definitions
 - tool choice
+- native function-call and function-call-output history
 - token usage parsing
 - function call parsing
 - injectable response and streaming HTTP transport for tests

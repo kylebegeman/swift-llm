@@ -165,6 +165,10 @@ public struct OpenAIClient: LLMClient {
     )
   }
 
+  public var capabilities: LLMClientCapabilities {
+    .openAIResponses
+  }
+
   public func respond(to request: LLMRequest) async throws -> LLMResponse {
     let httpRequest = try responsesHTTPRequest(for: request, stream: false)
     let httpResponse = try await transport.send(httpRequest)
@@ -249,7 +253,7 @@ public struct OpenAIClient: LLMClient {
     let url = baseURL.appendingPathComponent("responses")
     let body = OpenAIResponsesRequest(
       model: model,
-      input: request.openAIInputMessages,
+      input: try request.openAIInputItems(),
       instructions: request.openAIInstructions,
       maxOutputTokens: request.parameters.maxOutputTokens,
       temperature: request.parameters.temperature,
@@ -370,7 +374,7 @@ extension AnyLLMClient {
 
 private struct OpenAIResponsesRequest: Encodable {
   var model: String
-  var input: [OpenAIInputMessage]
+  var input: [OpenAIInputItem]
   var instructions: String?
   var maxOutputTokens: Int?
   var temperature: Double?
@@ -399,6 +403,71 @@ private struct OpenAIResponsesRequest: Encodable {
 private struct OpenAIInputMessage: Encodable {
   var role: String
   var content: String
+}
+
+private enum OpenAIInputItem: Encodable {
+  case functionCall(OpenAIFunctionCallInput)
+  case functionCallOutput(OpenAIFunctionCallOutputInput)
+  case message(OpenAIInputMessage)
+
+  func encode(to encoder: any Encoder) throws {
+    switch self {
+    case let .functionCall(value):
+      try value.encode(to: encoder)
+    case let .functionCallOutput(value):
+      try value.encode(to: encoder)
+    case let .message(value):
+      try value.encode(to: encoder)
+    }
+  }
+}
+
+private struct OpenAIFunctionCallInput: Encodable {
+  var arguments: String
+  var callID: String
+  var id: String
+  var name: String
+  var type = "function_call"
+
+  init(_ toolCall: LLMToolCall) {
+    self.arguments = toolCall.argumentsJSON
+    self.callID = toolCall.id
+    self.id = toolCall.id
+    self.name = toolCall.name
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case arguments
+    case callID = "call_id"
+    case id
+    case name
+    case type
+  }
+}
+
+private struct OpenAIFunctionCallOutputInput: Encodable {
+  var callID: String
+  var output: String
+  var type = "function_call_output"
+
+  init(message: LLMMessage) throws {
+    guard let toolCallID = message.toolCallID,
+          !toolCallID.isEmpty
+    else {
+      throw LLMClientError(
+        reason: .badRequest,
+        debugDescription: "OpenAI tool result messages require a non-empty toolCallID."
+      )
+    }
+    self.callID = toolCallID
+    self.output = message.content
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case callID = "call_id"
+    case output
+    case type
+  }
 }
 
 private struct OpenAITextConfig: Encodable {
@@ -614,25 +683,33 @@ private struct OpenAIProviderError: Decodable {
   var message: String?
 }
 
-private extension Array where Element == LLMMessage {
-  var openAIInputMessages: [OpenAIInputMessage] {
-    filter { $0.role != .system && $0.role != .developer }
-      .map { message in
-        OpenAIInputMessage(
-          role: message.role.openAIRole,
-          content: message.openAIContent
-        )
+private extension LLMRequest {
+  func openAIInputItems() throws -> [OpenAIInputItem] {
+    let inputItems = try messages
+      .filter { $0.role != .system && $0.role != .developer }
+      .flatMap { message in
+        try message.openAIInputItems
       }
+    return inputItems.isEmpty ? [.message(OpenAIInputMessage(role: "user", content: ""))] : inputItems
   }
 }
 
 private extension LLMMessage {
-  var openAIContent: String {
-    switch role {
-    case .tool:
-      return "Tool result\(toolCallID.map { " \($0)" } ?? ""):\n\(content)"
-    case .assistant, .developer, .system, .user:
-      return content
+  var openAIInputItems: [OpenAIInputItem] {
+    get throws {
+      switch role {
+      case .assistant:
+        var inputItems: [OpenAIInputItem] = []
+        if !content.isEmpty {
+          inputItems.append(.message(OpenAIInputMessage(role: role.openAIRole, content: content)))
+        }
+        inputItems.append(contentsOf: toolCalls.map { .functionCall(OpenAIFunctionCallInput($0)) })
+        return inputItems
+      case .tool:
+        return [.functionCallOutput(try OpenAIFunctionCallOutputInput(message: self))]
+      case .developer, .system, .user:
+        return [.message(OpenAIInputMessage(role: role.openAIRole, content: content))]
+      }
     }
   }
 }
@@ -655,11 +732,6 @@ private extension LLMMessageRole {
 }
 
 private extension LLMRequest {
-  var openAIInputMessages: [OpenAIInputMessage] {
-    let messages = messages.openAIInputMessages
-    return messages.isEmpty ? [OpenAIInputMessage(role: "user", content: "")] : messages
-  }
-
   var openAIInstructions: String? {
     let messageInstructions = messages
       .filter { $0.role == .system || $0.role == .developer }

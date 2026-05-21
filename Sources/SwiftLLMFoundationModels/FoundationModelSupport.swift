@@ -211,7 +211,7 @@ public enum FoundationModelFailureReason: Equatable, Sendable {
   case providerError
 }
 
-public struct FoundationModelFailure: Error, Equatable, LocalizedError, Sendable {
+public struct FoundationModelFailure: LLMFallbackClassifiableError, Equatable, LocalizedError, Sendable {
   public var debugDescription: String?
   public var reason: FoundationModelFailureReason
 
@@ -358,6 +358,12 @@ public struct FoundationModelClient: Sendable {
 }
 
 extension FoundationModelClient: LLMClient {
+  public var capabilities: LLMClientCapabilities {
+    var capabilities = LLMClientCapabilities.foundationModelsProviderNeutral
+    capabilities.contextWindowTokens = FoundationModelDefaults.contextWindowTokens
+    return capabilities
+  }
+
   public var metadata: LLMProviderMetadata {
     FoundationModelDefaults.metadata()
   }
@@ -406,7 +412,10 @@ extension FoundationModelClient: LLMClient {
   }
 
   private static func validateSupportedFeatures(for request: LLMRequest) throws {
-    if !request.tools.isEmpty || request.toolChoice?.requiresToolSupport == true {
+    if !request.tools.isEmpty ||
+      request.toolChoice?.requiresToolSupport == true ||
+      request.messages.contains(where: { $0.role == .tool || !$0.toolCalls.isEmpty })
+    {
       throw LLMClientError(
         reason: .unsupported,
         debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter does not support tool calling yet."
@@ -439,17 +448,6 @@ extension FoundationModelClient: LLMClient {
         return text
       }
       .joined(separator: "\n\n")
-  }
-}
-
-private extension LLMToolChoice {
-  var requiresToolSupport: Bool {
-    switch self {
-    case .auto, .none:
-      return false
-    case .required, .tool:
-      return true
-    }
   }
 }
 

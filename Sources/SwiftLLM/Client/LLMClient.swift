@@ -101,22 +101,31 @@ public struct LLMMessage: Codable, Equatable, Sendable {
   public var content: String
   public var name: String?
   public var role: LLMMessageRole
+  public var toolCalls: [LLMToolCall]
   public var toolCallID: String?
+  public var toolResultIsError: Bool
 
   public init(
     role: LLMMessageRole,
     content: String,
     name: String? = nil,
-    toolCallID: String? = nil
+    toolCallID: String? = nil,
+    toolCalls: [LLMToolCall] = [],
+    toolResultIsError: Bool = false
   ) {
     self.content = content
     self.name = name
     self.role = role
+    self.toolCalls = toolCalls
     self.toolCallID = toolCallID
+    self.toolResultIsError = toolResultIsError
   }
 
-  public static func assistant(_ content: String) -> Self {
-    Self(role: .assistant, content: content)
+  public static func assistant(
+    _ content: String,
+    toolCalls: [LLMToolCall] = []
+  ) -> Self {
+    Self(role: .assistant, content: content, toolCalls: toolCalls)
   }
 
   public static func developer(_ content: String) -> Self {
@@ -127,8 +136,17 @@ public struct LLMMessage: Codable, Equatable, Sendable {
     Self(role: .system, content: content)
   }
 
-  public static func tool(_ content: String, toolCallID: String) -> Self {
-    Self(role: .tool, content: content, toolCallID: toolCallID)
+  public static func tool(
+    _ content: String,
+    toolCallID: String,
+    isError: Bool = false
+  ) -> Self {
+    Self(
+      role: .tool,
+      content: content,
+      toolCallID: toolCallID,
+      toolResultIsError: isError
+    )
   }
 
   public static func user(_ content: String) -> Self {
@@ -213,7 +231,7 @@ public enum LLMToolChoice: Equatable, Sendable {
   case tool(String)
 }
 
-public struct LLMToolCall: Equatable, Identifiable, Sendable {
+public struct LLMToolCall: Codable, Equatable, Identifiable, Sendable {
   public var argumentsJSON: String
   public var id: String
   public var name: String
@@ -310,7 +328,7 @@ public struct LLMResponse: Equatable, Identifiable, Sendable {
   ) {
     self.finishReason = finishReason
     self.id = id
-    self.message = message ?? .assistant(text)
+    self.message = message ?? .assistant(text, toolCalls: toolCalls)
     self.metadata = metadata
     self.model = model
     self.text = text
@@ -348,7 +366,7 @@ public enum LLMClientErrorReason: Equatable, Sendable {
   case unsupported
 }
 
-public struct LLMClientError: Error, Equatable, LocalizedError, Sendable {
+public struct LLMClientError: LLMFallbackClassifiableError, Equatable, LocalizedError, Sendable {
   public var debugDescription: String?
   public var reason: LLMClientErrorReason
   public var statusCode: Int?
@@ -392,8 +410,10 @@ public struct LLMClientError: Error, Equatable, LocalizedError, Sendable {
 
   public var fallbackReason: FallbackReason {
     switch reason {
-    case .authentication, .badRequest, .network, .provider, .unsupported:
+    case .authentication, .badRequest, .provider:
       return .providerError(debugDescription ?? errorDescription ?? "Provider error.")
+    case .network:
+      return .unavailable
     case .cancelled:
       return .providerError("Request cancelled.")
     case .contextExceeded:
@@ -406,11 +426,14 @@ public struct LLMClientError: Error, Equatable, LocalizedError, Sendable {
       return .rateLimited
     case .unavailable:
       return .unavailable
+    case .unsupported:
+      return .unsupported
     }
   }
 }
 
 public protocol LLMClient: Sendable {
+  var capabilities: LLMClientCapabilities { get }
   var metadata: LLMProviderMetadata { get }
 
   func respond(to request: LLMRequest) async throws -> LLMResponse
@@ -418,6 +441,10 @@ public protocol LLMClient: Sendable {
 }
 
 extension LLMClient {
+  public var capabilities: LLMClientCapabilities {
+    .broadlyCompatible
+  }
+
   public func stream(to request: LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error> {
     AsyncThrowingStream { continuation in
       let metadata = self.metadata
@@ -446,9 +473,11 @@ public struct AnyLLMClient: LLMClient {
   private var respondHandler: @Sendable (LLMRequest) async throws -> LLMResponse
   private var streamHandler: @Sendable (LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error>
 
+  public var capabilities: LLMClientCapabilities
   public var metadata: LLMProviderMetadata
 
   public init<C: LLMClient>(_ client: C) {
+    self.capabilities = client.capabilities
     self.metadata = client.metadata
     self.respondHandler = { request in
       try await client.respond(to: request)
@@ -460,9 +489,11 @@ public struct AnyLLMClient: LLMClient {
 
   public init(
     metadata: LLMProviderMetadata,
+    capabilities: LLMClientCapabilities = .broadlyCompatible,
     respond: @escaping @Sendable (LLMRequest) async throws -> LLMResponse,
     stream: (@Sendable (LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error>)? = nil
   ) {
+    self.capabilities = capabilities
     self.metadata = metadata
     self.respondHandler = respond
     if let stream {
@@ -512,7 +543,7 @@ public struct AnyLLMClient: LLMClient {
       providerDisplayName: "Test Double",
       providerKind: .testDouble
     )
-    return Self(metadata: metadata) { request in
+    return Self(metadata: metadata, capabilities: .deterministicLocal) { request in
       LLMResponse(
         text: try await respond(request),
         metadata: metadata

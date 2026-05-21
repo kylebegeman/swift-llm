@@ -1,0 +1,83 @@
+import Foundation
+import SwiftLLM
+import SwiftLLMAnthropic
+import SwiftLLMOpenAI
+
+actor RequestCapture<Request: Sendable> {
+  private var request: Request?
+
+  func record(_ request: Request) {
+    self.request = request
+  }
+
+  func value() -> Request? {
+    request
+  }
+}
+
+extension OpenAIHTTPRequest {
+  func jsonObject() throws -> [String: JSONValue] {
+    try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
+  }
+}
+
+extension AnthropicHTTPRequest {
+  func jsonObject() throws -> [String: JSONValue] {
+    try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
+  }
+}
+
+extension JSONValue {
+  var arrayValue: [JSONValue]? {
+    guard case let .array(value) = self else { return nil }
+    return value
+  }
+
+  var boolValue: Bool? {
+    guard case let .bool(value) = self else { return nil }
+    return value
+  }
+
+  var objectValue: [String: JSONValue]? {
+    guard case let .object(value) = self else { return nil }
+    return value
+  }
+
+  var stringValue: String? {
+    guard case let .string(value) = self else { return nil }
+    return value
+  }
+}
+
+extension Array where Element == LLMStreamEvent {
+  var completedResponse: LLMResponse? {
+    compactMap { event -> LLMResponse? in
+      guard case let .completed(response) = event else { return nil }
+      return response
+    }
+    .last
+  }
+
+  var startedProviders: [LLMProviderKind] {
+    compactMap { event -> LLMProviderKind? in
+      guard case let .started(metadata) = event else { return nil }
+      return metadata.providerKind
+    }
+  }
+
+  var textDeltas: [String] {
+    compactMap { event -> String? in
+      guard case let .textDelta(delta) = event else { return nil }
+      return delta
+    }
+  }
+}
+
+func lineStream(_ lines: [String]) -> AsyncThrowingStream<String, any Error> {
+  AsyncThrowingStream { continuation in
+    for line in lines {
+      continuation.yield(line)
+    }
+    continuation.finish()
+  }
+}

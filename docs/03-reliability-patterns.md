@@ -149,9 +149,12 @@ Bad retry patterns:
 
 Fallbacks should be part of the design, not an error catch-all.
 
+For provider routing, fallback should be selective. SwiftLLM's router retries retryable conditions such as unavailable providers, rate limits, context limits, unsupported capabilities, unavailable local assets, unsupported local guides/locales, and concurrent local model requests. It intentionally avoids retrying bad requests, authentication failures, guardrail/refusal failures, validation failures, and unknown provider errors by default.
+
 Common fallback reasons:
 
 - model unavailable
+- unsupported provider capability
 - unsupported locale
 - context exceeded
 - guardrail violation

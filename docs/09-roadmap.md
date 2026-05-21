@@ -123,13 +123,15 @@ Add Swift-native provider access that can support local Foundation Models plus e
 
 - provider-neutral `LLMClient` protocol: implemented
 - `LLMRequest`, `LLMResponse`, `LLMMessage`, response formats, tools, tool calls, streaming events, and normalized client errors: implemented
+- provider capability negotiation: implemented through `LLMClientCapabilities`
 - type-erased `AnyLLMClient`: implemented
-- fallback `LLMRouter`: implemented for non-streaming responses
+- fallback `LLMRouter`: implemented with retryable error policy and before-output streaming fallback
 - high-level `LLMPipeline` over prompt contracts and optional local RAG: implemented
 - Foundation Models conformance to `LLMClient`: implemented
 - OpenAI Responses API adapter: implemented
 - Anthropic Messages API adapter: implemented
 - injectable response and streaming HTTP transports for provider tests: implemented
+- provider-native tool result message mapping: implemented for OpenAI `function_call_output` and Anthropic `tool_result`
 
 Acceptance criteria:
 
@@ -137,7 +139,7 @@ Acceptance criteria:
 - Provider adapter tests do not require real API keys or network calls.
 - API key storage remains an app concern.
 
-Remaining refinements can happen in later phases: richer streaming fallback semantics, provider capability negotiation, provider-specific structured output affordances, stricter schema validation, request/response trace redaction, and retry/backoff policy hooks.
+Remaining refinements can happen in later phases: provider-specific structured output affordances, stricter schema validation, request/response trace redaction, retry/backoff policy hooks, and richer token/cost accounting for tool-heavy conversations.
 
 ## Phase 7: Open Source Preparation
 

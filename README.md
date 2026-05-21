@@ -11,7 +11,7 @@ It is not an attempt to make Apple Foundation Models behave like frontier cloud 
 - structured generation validation
 - evidence-aware candidate pipelines
 - source-aware local retrieval-augmented generation pipelines
-- deterministic fallbacks
+- capability-aware routing and deterministic fallbacks
 - prompt-version evaluation and redacted local diagnostics
 - local-only run metadata and diagnostics
 
@@ -54,6 +54,8 @@ let response = try await client.respond(
 ```
 
 API keys are provided by the app at runtime. SwiftLLM does not define a key storage policy.
+
+`LLMRouter` checks provider capabilities before dispatch, falls back only for retryable failures by default, and can continue streaming from a fallback provider when the primary fails before producing output.
 
 ## Showcase
 

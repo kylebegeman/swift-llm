@@ -48,7 +48,7 @@ The core package does not import Foundation Models. That keeps the core abstract
 
 - provider and run metadata
 - provider-neutral request, response, streaming event, tool, and response-format types
-- `LLMClient`, `AnyLLMClient`, and `LLMRouter`
+- `LLMClient`, `AnyLLMClient`, provider capabilities, and `LLMRouter`
 - prompt contracts
 - examples and example selection
 - token budgeting
@@ -65,6 +65,7 @@ The core package does not import Foundation Models. That keeps the core abstract
 - structured candidate wrappers
 - validation issues and validators
 - repair and fallback policies
+- capability-aware provider routing
 - provider-neutral structured generation pipelines
 - fallback reasons
 - generated candidate wrappers
@@ -102,6 +103,7 @@ It includes:
 - request translation from `LLMRequest`
 - text, JSON object, JSON schema, tool definition, and tool choice encoding
 - response parsing for `output_text`, message content, function calls, and token usage
+- native tool-call and `function_call_output` history encoding
 - SSE streaming for text deltas where the platform supports streaming URLSession bytes
 - injectable `OpenAIHTTPTransport` for tests and app-specific networking policy
 
@@ -117,6 +119,7 @@ It includes:
 - system/developer instruction folding into Anthropic `system`
 - user/assistant message translation
 - tool definition and tool choice encoding
+- native `tool_use` and `tool_result` history encoding
 - response parsing for text blocks, tool use blocks, stop reasons, and token usage
 - SSE streaming for text deltas where the platform supports streaming URLSession bytes
 - injectable `AnthropicHTTPTransport` for tests and app-specific networking policy
@@ -157,6 +160,7 @@ Generated `.xcodeproj` files are ignored.
 - Keep closures explicit when behavior is app-provided.
 - Preserve provider metadata through every generation result.
 - Make fallback behavior visible.
+- Prefer capability negotiation before trial-and-error provider dispatch.
 - Avoid storing raw prompts or outputs by default.
 - Keep validation deterministic where possible.
 - Keep names app-neutral.

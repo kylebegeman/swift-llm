@@ -165,6 +165,10 @@ public struct AnthropicClient: LLMClient {
     )
   }
 
+  public var capabilities: LLMClientCapabilities {
+    .anthropicMessages
+  }
+
   public func respond(to request: LLMRequest) async throws -> LLMResponse {
     let httpRequest = try messagesHTTPRequest(for: request, stream: false)
     let httpResponse = try await transport.send(httpRequest)
@@ -244,7 +248,7 @@ public struct AnthropicClient: LLMClient {
     let body = AnthropicMessageRequest(
       model: model,
       maxTokens: request.parameters.maxOutputTokens ?? defaultMaxTokens,
-      messages: request.anthropicMessages,
+      messages: try request.anthropicMessages(),
       system: request.anthropicSystem,
       temperature: request.parameters.temperature,
       topP: request.parameters.topP,
@@ -370,9 +374,72 @@ private struct AnthropicMessageRequest: Encodable {
   }
 }
 
-private struct AnthropicMessage: Codable {
+private struct AnthropicMessage: Encodable {
   var role: String
+  var content: [AnthropicMessageContent]
+}
+
+private enum AnthropicMessageContent: Encodable {
+  case text(String)
+  case toolResult(AnthropicToolResultContent)
+  case toolUse(AnthropicToolUseContent)
+
+  func encode(to encoder: any Encoder) throws {
+    switch self {
+    case let .text(text):
+      try AnthropicTextContent(text: text).encode(to: encoder)
+    case let .toolResult(result):
+      try result.encode(to: encoder)
+    case let .toolUse(toolUse):
+      try toolUse.encode(to: encoder)
+    }
+  }
+}
+
+private struct AnthropicTextContent: Encodable {
+  var text: String
+  var type = "text"
+}
+
+private struct AnthropicToolUseContent: Encodable {
+  var id: String
+  var input: JSONValue
+  var name: String
+  var type = "tool_use"
+
+  init(_ toolCall: LLMToolCall) throws {
+    self.id = toolCall.id
+    self.input = try toolCall.argumentsValue()
+    self.name = toolCall.name
+  }
+}
+
+private struct AnthropicToolResultContent: Encodable {
   var content: String
+  var isError: Bool?
+  var toolUseID: String
+  var type = "tool_result"
+
+  init(message: LLMMessage) throws {
+    guard let toolCallID = message.toolCallID,
+          !toolCallID.isEmpty
+    else {
+      throw LLMClientError(
+        reason: .badRequest,
+        debugDescription: "Anthropic tool result messages require a non-empty toolCallID."
+      )
+    }
+    self.content = message.content
+    self.isError = message.toolResultIsError ? true : nil
+    self.toolUseID = toolCallID
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case content
+    case isError = "is_error"
+    case toolUseID = "tool_use_id"
+    case type
+  }
 }
 
 private struct AnthropicTool: Encodable {
@@ -536,16 +603,50 @@ private struct AnthropicProviderError: Decodable {
 }
 
 private extension LLMRequest {
-  var anthropicMessages: [AnthropicMessage] {
-    let messages = messages
-      .filter { $0.role != .system && $0.role != .developer }
-      .map { message in
-        AnthropicMessage(
-          role: message.role.anthropicRole,
-          content: message.anthropicContent
+  func anthropicMessages() throws -> [AnthropicMessage] {
+    let conversationalMessages = messages.filter { $0.role != .system && $0.role != .developer }
+    var anthropicMessages: [AnthropicMessage] = []
+    var index = conversationalMessages.startIndex
+
+    while index < conversationalMessages.endIndex {
+      let message = conversationalMessages[index]
+
+      if message.role == .tool {
+        var content = try message.anthropicToolResultContent
+        index = conversationalMessages.index(after: index)
+
+        while index < conversationalMessages.endIndex,
+              conversationalMessages[index].role == .tool
+        {
+          content.append(contentsOf: try conversationalMessages[index].anthropicToolResultContent)
+          index = conversationalMessages.index(after: index)
+        }
+
+        if index < conversationalMessages.endIndex,
+           conversationalMessages[index].role == .user
+        {
+          let userMessage = conversationalMessages[index]
+          if !userMessage.content.isEmpty {
+            content.append(.text(userMessage.content))
+          }
+          index = conversationalMessages.index(after: index)
+        }
+
+        anthropicMessages.append(AnthropicMessage(role: "user", content: content))
+      } else {
+        anthropicMessages.append(
+          AnthropicMessage(
+            role: message.role.anthropicRole,
+            content: try message.anthropicContent
+          )
         )
+        index = conversationalMessages.index(after: index)
       }
-    return messages.isEmpty ? [AnthropicMessage(role: "user", content: "")] : messages
+    }
+
+    return anthropicMessages.isEmpty
+      ? [AnthropicMessage(role: "user", content: [.text("")])]
+      : anthropicMessages
   }
 
   var anthropicSystem: String? {
@@ -565,12 +666,44 @@ private extension LLMRequest {
 }
 
 private extension LLMMessage {
-  var anthropicContent: String {
-    switch role {
-    case .tool:
-      return "Tool result\(toolCallID.map { " \($0)" } ?? ""):\n\(content)"
-    case .assistant, .developer, .system, .user:
-      return content
+  var anthropicContent: [AnthropicMessageContent] {
+    get throws {
+      switch role {
+      case .assistant:
+        var content: [AnthropicMessageContent] = []
+        if !self.content.isEmpty {
+          content.append(.text(self.content))
+        }
+        content.append(contentsOf: try toolCalls.map { .toolUse(try AnthropicToolUseContent($0)) })
+        return content.isEmpty ? [.text("")] : content
+      case .tool:
+        return try anthropicToolResultContent
+      case .developer, .system, .user:
+        return [.text(content)]
+      }
+    }
+  }
+
+  var anthropicToolResultContent: [AnthropicMessageContent] {
+    get throws {
+      [.toolResult(try AnthropicToolResultContent(message: self))]
+    }
+  }
+}
+
+private extension LLMToolCall {
+  func argumentsValue() throws -> JSONValue {
+    guard !argumentsJSON.isEmpty,
+          let data = argumentsJSON.data(using: .utf8)
+    else { return .object([:]) }
+
+    do {
+      return try JSONDecoder.provider.decode(JSONValue.self, from: data)
+    } catch {
+      throw LLMClientError(
+        reason: .badRequest,
+        debugDescription: "Anthropic tool call arguments must be valid JSON."
+      )
     }
   }
 }
