@@ -1,0 +1,64 @@
+# SwiftLLM Start Here
+
+## Use When
+
+Read this before working in SwiftLLM. It gives the shortest route to the relevant docs and package targets.
+
+## Quick Facts
+
+- Repo type: Swift package plus XcodeGen iOS showcase app.
+- Package name: `swift-llm`.
+- Public products:
+  - `SwiftLLM`
+  - `SwiftLLMFoundationModels`
+  - `SwiftLLMEvaluation`
+- Primary language: Swift 6.2.
+- Platforms: iOS 26, macOS 26, visionOS 26.
+- Mission: reliability primitives for local-first Apple language model features.
+- First incubation app: Chime In.
+- Durable docs: `docs/`.
+- Expendable notes: `scratch/`.
+
+## Recommended Read Order
+
+1. `../docs/README.md`
+2. `capabilities/repo-map.md`
+3. `capabilities/foundation-models-wrapper.md`
+4. `capabilities/reliability-patterns.md`
+5. `capabilities/chime-in-incubation.md` when work is driven by Chime In
+6. One focused playbook based on the task
+
+## Recommended Playbooks
+
+- Build, test, or regenerate the showcase:
+  `playbooks/build-and-verify.md`
+- Add a core package primitive:
+  `playbooks/add-generation-primitive.md`
+- Change prompts, validation, or quality behavior:
+  `playbooks/evaluate-prompt-change.md`
+- Update the showcase or docs:
+  `playbooks/refresh-showcase-and-docs.md`
+
+## Files Likely Involved
+
+- `Package.swift`
+- `Sources/SwiftLLM/`
+- `Sources/SwiftLLMFoundationModels/`
+- `Sources/SwiftLLMEvaluation/`
+- `Tests/SwiftLLMTests/`
+- `Examples/LLMShowcase/project.yml`
+- `docs/`
+- `llm/`
+
+## Source Of Truth
+
+- Package structure and public targets: `Package.swift`.
+- Long-term architecture and product direction: `docs/`.
+- Agent routing: `llm/`.
+- Scratch notes: `scratch/`, not source of truth.
+
+## Escalate To Code When
+
+- you know whether the change belongs in core, Foundation Models integration, evaluation, or the showcase
+- you know whether a Chime In-driven idea is app-specific or package-general
+- a doc or playbook points to a specific target or file

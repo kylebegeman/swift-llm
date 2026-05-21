@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a reproducible SwiftLLM bug.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include raw private prompts, transcripts, model outputs, API keys, or user identifiers.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal steps or test case.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: input
+    id: swift-version
+    attributes:
+      label: Swift Version
+      placeholder: "swift --version"
+  - type: input
+    id: xcode-version
+    attributes:
+      label: Xcode Version
+      placeholder: "xcodebuild -version"
+  - type: dropdown
+    id: product
+    attributes:
+      label: Product
+      options:
+        - SwiftLLM
+        - SwiftLLMFoundationModels
+        - SwiftLLMEvaluation
+        - LLMShowcase
+        - Documentation
+    validations:
+      required: true

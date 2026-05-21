@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "repo": "swift-llm",
+  "entrypoint": "llm/START_HERE.md",
+  "preferredReadOrder": [
+    "docs/README.md",
+    "llm/capabilities/repo-map.md",
+    "llm/capabilities/foundation-models-wrapper.md",
+    "llm/capabilities/reliability-patterns.md",
+    "llm/capabilities/chime-in-incubation.md"
+  ],
+  "docs": [
+    {
+      "id": "start-here",
+      "path": "llm/START_HERE.md",
+      "kind": "entrypoint",
+      "summary": "Fast orientation for future agents working in SwiftLLM.",
+      "keywords": ["routing", "entrypoint", "read order"]
+    },
+    {
+      "id": "repo-map",
+      "path": "llm/capabilities/repo-map.md",
+      "kind": "capability",
+      "summary": "Package target layout and ownership boundaries.",
+      "keywords": ["architecture", "targets", "package"]
+    },
+    {
+      "id": "foundation-models-wrapper",
+      "path": "llm/capabilities/foundation-models-wrapper.md",
+      "kind": "capability",
+      "summary": "Foundation Models constraints and wrapper responsibilities.",
+      "keywords": ["FoundationModels", "availability", "guided generation", "tools"]
+    },
+    {
+      "id": "reliability-patterns",
+      "path": "llm/capabilities/reliability-patterns.md",
+      "kind": "capability",
+      "summary": "Token budgeting, context packing, local retrieval, validation, fallbacks, and evals.",
+      "keywords": ["reliability", "context", "retrieval", "validation", "fallbacks"]
+    },
+    {
+      "id": "chime-in-incubation",
+      "path": "llm/capabilities/chime-in-incubation.md",
+      "kind": "capability",
+      "summary": "How Chime In should test and adopt SwiftLLM without leaking app-specific models.",
+      "keywords": ["Chime In", "incubation", "adoption"]
+    },
+    {
+      "id": "build-and-verify",
+      "path": "llm/playbooks/build-and-verify.md",
+      "kind": "playbook",
+      "summary": "Local build, test, and showcase generation commands.",
+      "keywords": ["build", "test", "xcodegen"]
+    },
+    {
+      "id": "add-generation-primitive",
+      "path": "llm/playbooks/add-generation-primitive.md",
+      "kind": "playbook",
+      "summary": "How to add a new package primitive while keeping target boundaries clean.",
+      "keywords": ["implementation", "API", "target boundary"]
+    },
+    {
+      "id": "evaluate-prompt-change",
+      "path": "llm/playbooks/evaluate-prompt-change.md",
+      "kind": "playbook",
+      "summary": "How to update prompts, validators, and evaluation cases together.",
+      "keywords": ["prompts", "evals", "quality"]
+    },
+    {
+      "id": "refresh-showcase-and-docs",
+      "path": "llm/playbooks/refresh-showcase-and-docs.md",
+      "kind": "playbook",
+      "summary": "How to keep the showcase and docs aligned with package changes.",
+      "keywords": ["showcase", "docs", "xcodegen"]
+    }
+  ]
+}

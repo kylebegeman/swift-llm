@@ -1,0 +1,38 @@
+name: Feature Request
+description: Propose a package capability or refinement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep requests app-neutral. Chime In-specific behavior belongs in Chime In unless it can be generalized.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What developer workflow or product behavior is hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What API or behavior should SwiftLLM provide?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Foundation Models adapter
+        - Prompting
+        - Context and chunking
+        - Local RAG
+        - Structured generation
+        - Evaluation and diagnostics
+        - Documentation
+    validations:
+      required: true

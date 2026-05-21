@@ -1,0 +1,143 @@
+# Architecture
+
+## Repository Structure
+
+```text
+swift-llm/
+├── Package.swift
+├── Sources/
+│   ├── SwiftLLM/                    # Core app-neutral primitives
+│   ├── SwiftLLMFoundationModels/    # Apple Foundation Models integration
+│   └── SwiftLLMEvaluation/          # Prompt and output evaluation
+├── Tests/
+│   └── SwiftLLMTests/
+├── Examples/
+│   └── LLMShowcase/                 # XcodeGen iOS showcase app
+├── docs/                            # Durable human docs
+├── llm/                             # Compact agent routing docs
+└── scratch/                         # Expendable working notes
+```
+
+## Target Dependency Graph
+
+```text
+SwiftLLMEvaluation
+    └── SwiftLLM
+
+SwiftLLMFoundationModels
+    └── SwiftLLM
+    └── FoundationModels when available
+
+SwiftLLM
+    └── Foundation
+```
+
+The core package does not import Foundation Models. That keeps the core abstractions testable, portable across Apple SDK configurations, and usable in deterministic fallback paths.
+
+## `SwiftLLM`
+
+`SwiftLLM` owns primitives that should be useful even if the model is unavailable:
+
+- provider and run metadata
+- prompt contracts
+- examples and example selection
+- token budgeting
+- token estimation
+- text chunking
+- retrieved snippet packing
+- local retrieval query/result abstractions
+- source references and citation rendering
+- dependency-free keyword retrieval for tests and demos
+- local RAG pipeline composition
+- structured generation schemas and contracts
+- evidence sources and spans
+- structured candidate wrappers
+- validation issues and validators
+- repair and fallback policies
+- provider-neutral structured generation pipelines
+- fallback reasons
+- generated candidate wrappers
+- grounding validation
+
+This target must stay app-neutral. It should not know about Chime In recordings, Reminders, Calendar, SQLiteData, TCA, or external provider keys.
+
+## `SwiftLLMFoundationModels`
+
+`SwiftLLMFoundationModels` is the only package target that should import Apple's `FoundationModels` framework.
+
+It should grow into:
+
+- availability and locale helpers
+- model version metadata
+- prewarming helpers
+- guided generation wrappers
+- tool-call wrappers
+- error normalization
+- context-window error handling
+- refusal/guardrail handling
+- token-count adapters
+
+The first adapter slice now includes availability normalization, a token-count API with heuristic fallback when exact token counting is unavailable, prewarming, text generation, a typed guided generation entrypoint when `FoundationModels` can be imported, normalized error/fallback types, and fakeable closures for tests.
+
+This target should continue to normalize Foundation Models behavior into core SwiftLLM types instead of leaking every framework detail into app code.
+
+## `SwiftLLMEvaluation`
+
+`SwiftLLMEvaluation` owns test and QA primitives:
+
+- golden corpus records
+- required/forbidden substring assertions
+- structured output assertions
+- safety probes
+- latency and token budget thresholds
+- report models
+
+The first evaluation slice includes text assertions, structured output assertion closures, prompt-version reports, fallback matrices, metrics, JSON output, and redacted local debug bundles. Over time this should become the package's strongest differentiator because model behavior changes across OS releases.
+
+## Example App
+
+`Examples/LLMShowcase` is generated with XcodeGen. It should demonstrate package primitives in small, inspectable workflows:
+
+- model availability
+- context budget visualization
+- prompt contract previews
+- chunking previews
+- local retrieval, packing, and citation previews
+- evaluation results
+- Foundation Models request traces when available
+
+Generated `.xcodeproj` files are ignored.
+
+## Public API Rules
+
+- Prefer small value types over global singletons.
+- Keep closures explicit when behavior is app-provided.
+- Preserve provider metadata through every generation result.
+- Make fallback behavior visible.
+- Avoid storing raw prompts or outputs by default.
+- Keep validation deterministic where possible.
+- Keep names app-neutral.
+- Do not introduce dependencies until they remove real complexity.
+
+## Boundary With Chime In
+
+Chime In should own:
+
+- recording IDs
+- transcript segment persistence
+- review drafts
+- task/date/decision entities
+- capture modes
+- export workflows
+- SQLiteData and CloudKit wiring
+
+SwiftLLM should own:
+
+- prompt and model-run metadata
+- chunking and context packing
+- schema/generation orchestration
+- grounding and validation primitives
+- evaluation harnesses
+- local diagnostics models
+
+If a Chime In helper can be explained without saying "recording", "task", "date", "decision", or "capture mode", it may be a candidate for SwiftLLM.

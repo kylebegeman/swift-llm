@@ -1,0 +1,41 @@
+# Docs Index
+
+Start here for the durable, human-oriented explanation of SwiftLLM.
+
+## Recommended Read Order
+
+1. `00-overview.md`
+2. `01-architecture.md`
+3. `02-foundation-models-reference.md`
+4. `03-reliability-patterns.md`
+5. `04-context-and-chunking.md`
+6. `05-structured-generation.md`
+7. `06-local-rag.md`
+8. `07-evaluation-and-diagnostics.md`
+9. `08-chime-in-incubation.md`
+10. `09-roadmap.md`
+11. `10-open-source-readiness.md`
+
+If you are an agent or want the cheapest route to the right files, use [`../llm/START_HERE.md`](../llm/START_HERE.md).
+
+## Durable vs. Scratch
+
+Durable docs live here. They should be kept accurate and reviewed when APIs or architecture decisions change.
+
+Temporary notes live in [`../scratch/`](../scratch/). Scratch files are expendable and should not be treated as source of truth.
+
+## Guides
+
+| File | Purpose |
+|---|---|
+| `00-overview.md` | package mission, scope, and non-goals |
+| `01-architecture.md` | target layout, public product boundaries, and ownership rules |
+| `02-foundation-models-reference.md` | platform constraints from Apple documentation and how they shape the package |
+| `03-reliability-patterns.md` | production AI techniques adapted to small on-device models |
+| `04-context-and-chunking.md` | token budgets, context packing, and long-input processing |
+| `05-structured-generation.md` | guided generation, schemas, validation, grounding, and repair |
+| `06-local-rag.md` | offline retrieval-augmented generation architecture |
+| `07-evaluation-and-diagnostics.md` | golden corpora, prompt regression, safety tests, and local diagnostics |
+| `08-chime-in-incubation.md` | how Chime In should consume and pressure-test the package |
+| `09-roadmap.md` | phased implementation plan |
+| `10-open-source-readiness.md` | publication criteria, licensing, API stability, and repo hygiene |
