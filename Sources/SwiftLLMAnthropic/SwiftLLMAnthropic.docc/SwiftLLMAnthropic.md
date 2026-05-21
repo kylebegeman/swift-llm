@@ -16,7 +16,8 @@ The adapter supports:
 - native tool-use and tool-result history
 - token usage parsing
 - tool use parsing
-- injectable response and streaming HTTP transport for tests
+- streaming text, tool-use JSON delta, stop-reason, token-usage, and failure event parsing
+- injectable response and streaming HTTP transport for tests and app-specific networking policy
 
 Apps provide API keys at initialization time and own credential storage.
 

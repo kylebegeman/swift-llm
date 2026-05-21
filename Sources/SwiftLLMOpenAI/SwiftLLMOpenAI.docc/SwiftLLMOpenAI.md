@@ -15,7 +15,8 @@ The adapter supports:
 - native function-call and function-call-output history
 - token usage parsing
 - function call parsing
-- injectable response and streaming HTTP transport for tests
+- streaming text, tool-call, completion, and failure event parsing
+- injectable response and streaming HTTP transport for tests and app-specific networking policy
 
 Apps provide API keys at initialization time and own credential storage.
 

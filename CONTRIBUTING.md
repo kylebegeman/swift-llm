@@ -15,7 +15,8 @@ Useful commands:
 ```sh
 swift build
 swift test
-xcodegen generate --spec Examples/LLMShowcase/project.yml
+swift build -Xswiftc -warnings-as-errors
+./scripts/validate.sh
 ```
 
 ## Development Rules
@@ -43,3 +44,4 @@ Before publishing publicly, every PR should include:
 - tests or a clear reason tests do not apply
 - documentation updates for architecture or API changes
 - prompt/evaluation updates for generation behavior changes
+- `./scripts/validate.sh` output, or the exact blocker when local tooling is unavailable

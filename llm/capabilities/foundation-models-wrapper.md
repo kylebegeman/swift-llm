@@ -30,7 +30,7 @@ It is now the typed adapter layer for availability, token counting, prewarming, 
 
 ## Source Of Truth
 
-- Durable package docs: `../docs/02-foundation-models-reference.md`
+- Durable package docs: `../../docs/02-foundation-models-reference.md`
 - Current code: `Sources/SwiftLLMFoundationModels/FoundationModelSupport.swift`
 
 ## Common Failure Modes
@@ -44,5 +44,5 @@ It is now the typed adapter layer for availability, token counting, prewarming, 
 ## Read Next
 
 - `reliability-patterns.md`
-- `../docs/04-context-and-chunking.md`
-- `../docs/05-structured-generation.md`
+- `../../docs/04-context-and-chunking.md`
+- `../../docs/05-structured-generation.md`

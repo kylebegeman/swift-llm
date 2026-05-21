@@ -1,6 +1,9 @@
 import Foundation
 import SwiftLLM
 
+// MARK: - Public Transport
+
+/// HTTP request shape used by `AnthropicHTTPTransport`.
 public struct AnthropicHTTPRequest: Sendable {
   public var body: Data
   public var headers: [String: String]
@@ -30,6 +33,7 @@ public struct AnthropicHTTPRequest: Sendable {
   }
 }
 
+/// HTTP response shape returned by `AnthropicHTTPTransport`.
 public struct AnthropicHTTPResponse: Sendable {
   public var body: Data
   public var headers: [String: String]
@@ -46,6 +50,7 @@ public struct AnthropicHTTPResponse: Sendable {
   }
 }
 
+/// Streaming HTTP response that yields server-sent-event lines.
 public struct AnthropicHTTPStreamResponse: Sendable {
   public var headers: [String: String]
   public var lines: AsyncThrowingStream<String, any Error>
@@ -62,6 +67,7 @@ public struct AnthropicHTTPStreamResponse: Sendable {
   }
 }
 
+/// Injectable Anthropic transport for production networking, tests, and app-specific policy.
 public struct AnthropicHTTPTransport: Sendable {
   public var send: @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPResponse
   public var stream: @Sendable (AnthropicHTTPRequest) async throws -> AnthropicHTTPStreamResponse
@@ -128,6 +134,9 @@ public struct AnthropicHTTPTransport: Sendable {
   }
 }
 
+// MARK: - Client
+
+/// Anthropic Messages API adapter for the provider-neutral `LLMClient` protocol.
 public struct AnthropicClient: LLMClient {
   private var apiKey: String
   public var apiVersion: String
@@ -319,6 +328,7 @@ public struct AnthropicClient: LLMClient {
     streamState: inout AnthropicStreamState,
     continuation: AsyncThrowingStream<LLMStreamEvent, any Error>.Continuation
   ) throws {
+    // Anthropic streams tool arguments as JSON fragments, so state is required until a block stops.
     for dataLine in dataLines where dataLine != "[DONE]" && !dataLine.isEmpty {
       let event = try JSONDecoder.provider.decode(AnthropicStreamEvent.self, from: Data(dataLine.utf8))
       switch event.type {
@@ -380,6 +390,8 @@ public struct AnthropicClient: LLMClient {
   }
 }
 
+// MARK: - AnyLLMClient Convenience
+
 extension AnyLLMClient {
   public static func anthropic(
     apiKey: String,
@@ -397,6 +409,8 @@ extension AnyLLMClient {
     )
   }
 }
+
+// MARK: - Request Encoding
 
 private struct AnthropicMessageRequest: Encodable {
   var model: String
@@ -550,6 +564,8 @@ private enum AnthropicToolChoice: Encodable {
   }
 }
 
+// MARK: - Response Decoding
+
 private struct AnthropicMessageResponse: Decodable {
   var content: [AnthropicContentBlock]
   var id: String
@@ -669,6 +685,8 @@ private struct AnthropicProviderError: Decodable {
   var message: String?
 }
 
+// MARK: - Stream State
+
 private struct AnthropicStreamState {
   var accumulatedText = ""
   var finishReason: LLMFinishReason?
@@ -748,6 +766,8 @@ private struct PendingAnthropicToolCall {
     )
   }
 }
+
+// MARK: - Request Mapping
 
 private extension LLMRequest {
   func anthropicMessages() throws -> [AnthropicMessage] {
@@ -901,6 +921,8 @@ private extension LLMResponseFormat {
     }
   }
 }
+
+// MARK: - JSON Coding
 
 private extension JSONDecoder {
   static var provider: JSONDecoder {

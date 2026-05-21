@@ -11,6 +11,8 @@ struct SwiftLLMTests {
     var tasks: [String]
   }
 
+  // MARK: - Context
+
   @Test
   func tokenBudgetReservesResponseAndSafetyMargin() {
     let budget = TokenBudget(
@@ -101,6 +103,8 @@ struct SwiftLLMTests {
     #expect(packed.map(\.id) == ["a1", "b1", "c1", "a2"])
   }
 
+  // MARK: - Prompting
+
   @Test
   func exampleSelectorPrefersMatchingTags() {
     let examples = [
@@ -113,6 +117,8 @@ struct SwiftLLMTests {
 
     #expect(selected.map(\.id) == ["meeting"])
   }
+
+  // MARK: - Validation And Evaluation
 
   @Test
   func groundingValidatorRejectsUnsupportedOutput() {
@@ -269,6 +275,8 @@ struct SwiftLLMTests {
     #expect(json.contains("\"providerKind\" : \"appleFoundationModels\""))
   }
 
+  // MARK: - Foundation Models
+
   @Test
   func foundationModelAvailabilityMapsUnavailableStateToFallback() {
     let availability = FoundationModelAvailability.modelNotReady
@@ -408,6 +416,8 @@ struct SwiftLLMTests {
     #expect(FoundationModelClient.unavailable.availability() == .unavailableInBuild)
   }
 
+  // MARK: - Structured Generation
+
   @Test
   func structuredSchemaProducesPromptDescription() {
     let schema = StructuredGenerationSchema(
@@ -545,6 +555,8 @@ struct SwiftLLMTests {
     #expect(result.repairPlan.action == .fallback(.validationFailed))
   }
 
+  // MARK: - Long Input Processing
+
   @Test
   func boundaryAwareChunkerPreservesSentenceBoundaries() {
     let text = "First sentence is short. Second sentence has more content. Third sentence closes."
@@ -640,6 +652,8 @@ struct SwiftLLMTests {
     #expect(result.partials.count == 2)
     #expect(result.output == "NEED TO FOLLOW UP. REVIEW PROMPT VERSIONS.")
   }
+
+  // MARK: - Local Retrieval
 
   @Test
   func keywordLocalRetrieverRanksMatchingLocalDocuments() async throws {

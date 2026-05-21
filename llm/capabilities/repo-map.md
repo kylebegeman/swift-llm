@@ -54,7 +54,7 @@ Use this card when deciding where a new API, test, doc, or showcase change belon
 
 ## Read Next
 
-- `../docs/01-architecture.md`
-- `../docs/13-provider-adapters.md`
+- `../../docs/01-architecture.md`
+- `../../docs/13-provider-adapters.md`
 - `foundation-models-wrapper.md`
 - `reliability-patterns.md`

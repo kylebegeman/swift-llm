@@ -3,6 +3,8 @@ import SwiftLLM
 import SwiftLLMAnthropic
 import SwiftLLMOpenAI
 
+// MARK: - Request Capture
+
 actor RequestCapture<Request: Sendable> {
   private var request: Request?
 
@@ -15,6 +17,8 @@ actor RequestCapture<Request: Sendable> {
   }
 }
 
+// MARK: - Request JSON
+
 extension OpenAIHTTPRequest {
   func jsonObject() throws -> [String: JSONValue] {
     try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
@@ -26,6 +30,8 @@ extension AnthropicHTTPRequest {
     try JSONDecoder().decode(JSONValue.self, from: body).objectValue ?? [:]
   }
 }
+
+// MARK: - JSONValue Accessors
 
 extension JSONValue {
   var arrayValue: [JSONValue]? {
@@ -48,6 +54,8 @@ extension JSONValue {
     return value
   }
 }
+
+// MARK: - Stream Events
 
 extension Array where Element == LLMStreamEvent {
   var completedResponse: LLMResponse? {
@@ -79,6 +87,8 @@ extension Array where Element == LLMStreamEvent {
     }
   }
 }
+
+// MARK: - Stream Fixtures
 
 func lineStream(_ lines: [String]) -> AsyncThrowingStream<String, any Error> {
   AsyncThrowingStream { continuation in

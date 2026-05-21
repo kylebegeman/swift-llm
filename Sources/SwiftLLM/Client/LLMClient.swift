@@ -1,5 +1,7 @@
 import Foundation
 
+/// A provider-neutral JSON value used for schemas, tool arguments, and other
+/// request/response shapes that must stay dependency-free in the core target.
 public indirect enum JSONValue: Equatable, Sendable {
   case array([JSONValue])
   case bool(Bool)
@@ -97,6 +99,11 @@ public enum LLMMessageRole: String, Codable, Equatable, Sendable {
   case user
 }
 
+/// A single provider-neutral conversation message.
+///
+/// The type carries both normal chat content and native tool-call history so
+/// adapters can round-trip provider tool messages without app code learning each
+/// provider's transport shape.
 public struct LLMMessage: Codable, Equatable, Sendable {
   public var content: String
   public var name: String?
@@ -153,6 +160,7 @@ public struct LLMMessage: Codable, Equatable, Sendable {
     Self(role: .user, content: content)
   }
 
+  // Keep default tool fields optional on the wire so older persisted messages remain decodable.
   enum CodingKeys: String, CodingKey {
     case content
     case name
@@ -187,6 +195,7 @@ public struct LLMMessage: Codable, Equatable, Sendable {
   }
 }
 
+/// Sampling and output controls shared by provider adapters.
 public struct LLMGenerationParameters: Equatable, Sendable {
   public var maxOutputTokens: Int?
   public var stopSequences: [String]
@@ -213,6 +222,8 @@ public struct LLMGenerationParameters: Equatable, Sendable {
   )
 }
 
+/// A JSON schema request that can be translated into provider-native structured
+/// output where supported, or prompt instructions where it is not.
 public struct LLMJSONSchema: Equatable, Sendable {
   public var description: String?
   public var name: String
@@ -238,6 +249,7 @@ public enum LLMResponseFormat: Equatable, Sendable {
   case text
 }
 
+/// Provider-neutral definition for a callable model tool.
 public struct LLMToolDefinition: Equatable, Sendable {
   public var description: String
   public var inputSchema: JSONValue
@@ -264,6 +276,7 @@ public enum LLMToolChoice: Equatable, Sendable {
   case tool(String)
 }
 
+/// A tool call emitted by a model.
 public struct LLMToolCall: Codable, Equatable, Identifiable, Sendable {
   public var argumentsJSON: String
   public var id: String
@@ -280,6 +293,7 @@ public struct LLMToolCall: Codable, Equatable, Identifiable, Sendable {
   }
 }
 
+/// A complete provider-neutral generation request.
 public struct LLMRequest: Equatable, Sendable {
   public var instructions: String?
   public var messages: [LLMMessage]
@@ -339,6 +353,7 @@ public enum LLMFinishReason: String, Equatable, Sendable {
   case unknown
 }
 
+/// A completed provider-neutral generation response.
 public struct LLMResponse: Equatable, Identifiable, Sendable {
   public var finishReason: LLMFinishReason?
   public var id: String
@@ -378,6 +393,7 @@ public struct LLMResponse: Equatable, Identifiable, Sendable {
   }
 }
 
+/// Streaming lifecycle events emitted by an `LLMClient`.
 public enum LLMStreamEvent: Equatable, Sendable {
   case completed(LLMResponse)
   case started(LLMProviderMetadata)
@@ -465,6 +481,7 @@ public struct LLMClientError: LLMFallbackClassifiableError, Equatable, Localized
   }
 }
 
+/// A common async interface for local and provider-backed language model clients.
 public protocol LLMClient: Sendable {
   var capabilities: LLMClientCapabilities { get }
   var metadata: LLMProviderMetadata { get }
@@ -502,6 +519,7 @@ extension LLMClient {
   }
 }
 
+/// Type-erased wrapper that lets routers and pipelines store heterogeneous clients.
 public struct AnyLLMClient: LLMClient {
   private var respondHandler: @Sendable (LLMRequest) async throws -> LLMResponse
   private var streamHandler: @Sendable (LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error>

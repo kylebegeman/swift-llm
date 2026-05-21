@@ -1,3 +1,4 @@
+/// A provider feature that can materially change request behavior.
 public enum LLMCapability: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
   case jsonObjectResponse
   case jsonSchemaResponse
@@ -10,6 +11,7 @@ public enum LLMCapability: String, CaseIterable, Codable, Equatable, Hashable, S
   case topP
 }
 
+/// Capability metadata used by routers to skip providers that cannot honor a request.
 public struct LLMClientCapabilities: Equatable, Sendable {
   public var contextWindowTokens: Int?
   public var supportedFeatures: Set<LLMCapability>

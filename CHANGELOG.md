@@ -15,3 +15,4 @@
 - Hardened the provider-neutral layer by preserving prompt-version metadata across adapters, rejecting unsupported Foundation Models features instead of silently ignoring them, routing provider streaming through injectable transports, keeping API keys out of public stored properties, and allowing required local retrieval sources for empty queries.
 - Added first-class provider capabilities, retryable router fallback policy, before-output streaming fallback, native OpenAI/Anthropic tool-result history mapping, and shared provider test support.
 - Fixed audit findings around persisted message decoding, exact short grounding evidence, required local retrieval priority, OpenAI failed response/stream errors, and Anthropic streamed tool-call events.
+- Polished production-readiness docs, provider file organization, public API comments, issue templates, and agent doc links.

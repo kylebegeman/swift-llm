@@ -104,7 +104,7 @@ It includes:
 - text, JSON object, JSON schema, tool definition, and tool choice encoding
 - response parsing for `output_text`, message content, function calls, and token usage
 - native tool-call and `function_call_output` history encoding
-- SSE streaming for text deltas where the platform supports streaming URLSession bytes
+- SSE streaming for text deltas, provider completion events, and provider failure events
 - injectable `OpenAIHTTPTransport` for tests and app-specific networking policy
 
 This target does not persist API keys or define credential policy. Apps provide credentials at initialization time and own any Keychain, environment, or settings behavior.
@@ -121,7 +121,7 @@ It includes:
 - tool definition and tool choice encoding
 - native `tool_use` and `tool_result` history encoding
 - response parsing for text blocks, tool use blocks, stop reasons, and token usage
-- SSE streaming for text deltas where the platform supports streaming URLSession bytes
+- SSE streaming for text deltas, tool-use JSON deltas, stop reasons, token usage, and provider failure events
 - injectable `AnthropicHTTPTransport` for tests and app-specific networking policy
 
 This target is intentionally parallel to the OpenAI adapter so provider behavior stays visible instead of becoming a hidden abstraction layer.

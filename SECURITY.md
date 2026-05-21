@@ -10,7 +10,7 @@ Before public release, replace this placeholder with a vulnerability reporting a
 - No network access in core targets.
 - No API keys in package code, docs examples, tests, fixtures, or generated projects.
 - No synced storage of raw prompts, raw outputs, transcripts, or provider request payloads by default.
-- Any future external-provider integration must be explicit, opt-in, and isolated from the local-first core.
+- External-provider behavior must remain explicit, opt-in, and isolated from the local-first core.
 
 ## Reporting
 

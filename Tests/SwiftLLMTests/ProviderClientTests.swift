@@ -7,6 +7,8 @@ import Testing
 
 @Suite("Provider clients")
 struct ProviderClientTests {
+  // MARK: - OpenAI
+
   @Test
   func openAIClientEncodesResponsesRequestAndParsesResponse() async throws {
     let capture = RequestCapture<OpenAIHTTPRequest>()
@@ -282,6 +284,8 @@ struct ProviderClientTests {
     #expect(input[2].objectValue?["call_id"] == "call_1")
     #expect(input[2].objectValue?["output"] == #"{"title":"Private note"}"#)
   }
+
+  // MARK: - Anthropic
 
   @Test
   func anthropicClientEncodesMessagesRequestAndParsesResponse() async throws {
@@ -584,6 +588,8 @@ struct ProviderClientTests {
     #expect(toolResultContent[1].objectValue?["text"] == "Continue with what you know.")
   }
 
+  // MARK: - Router
+
   @Test
   func routerFallsBackWhenPrimaryClientThrows() async throws {
     let failingMetadata = LLMProviderMetadata(
@@ -740,6 +746,8 @@ struct ProviderClientTests {
     #expect(events.textDeltas == ["partial"])
   }
 
+  // MARK: - Pipeline
+
   @Test
   func pipelineInjectsLocalRetrievalContextBeforeGeneration() async throws {
     let retriever = KeywordLocalRetriever(
@@ -789,6 +797,8 @@ struct ProviderClientTests {
     #expect(result.request.metadata["promptID"] == "answer")
     #expect(result.compiledPrompt.metadata.promptVersion == "v2")
   }
+
+  // MARK: - Foundation Models
 
   @Test
   func foundationModelClientCanRespondThroughCommonProtocol() async throws {
@@ -869,6 +879,8 @@ struct ProviderClientTests {
       Issue.record("Expected LLMClientError, got \(error).")
     }
   }
+
+  // MARK: - Helpers
 
   private static func metadata(
     name: String,

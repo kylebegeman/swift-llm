@@ -30,7 +30,7 @@ Acceptance criteria:
 - Chime In can call Foundation Models through SwiftLLM without owning framework-specific error handling.
 - Tests can exercise unavailable/fallback behavior without importing Foundation Models.
 
-Remaining refinements can happen in later phases: streaming, tool-call wrappers, feedback attachment capture, richer token accounting for instructions/schemas/tools, and typed diagnostics reports.
+Remaining refinements can happen in later phases: Foundation Models tool-call wrappers, feedback attachment capture, richer token accounting for instructions/schemas/tools, and typed diagnostics reports.
 
 ## Phase 2: Structured Generation Toolkit
 
@@ -147,10 +147,10 @@ Before public release:
 
 - choose license
 - audit docs for private Chime In details
-- add API stability policy
-- add DocC documentation
-- add CI
-- add contribution guide details
+- finalize API stability policy
+- expand DocC documentation
+- harden CI across supported Xcode versions
+- finalize contribution guide details
 - add security reporting contact
 - add sample screenshots
 - tag `0.1.0`

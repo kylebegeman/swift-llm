@@ -49,6 +49,8 @@ body:
       options:
         - SwiftLLM
         - SwiftLLMFoundationModels
+        - SwiftLLMOpenAI
+        - SwiftLLMAnthropic
         - SwiftLLMEvaluation
         - LLMShowcase
         - Documentation

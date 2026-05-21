@@ -197,6 +197,7 @@ public struct KeywordLocalRetriever: LocalRetriever {
       }
     }
 
+    // User-selected sources are stronger intent than incidental keyword score.
     let ranked = snippets
       .sorted { lhs, rhs in
         if lhs.isRequired != rhs.isRequired {

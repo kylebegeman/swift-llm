@@ -73,8 +73,10 @@ Generated `.xcodeproj` files are intentionally ignored.
 ```sh
 swift build
 swift test
-xcodegen generate --spec Examples/LLMShowcase/project.yml
+./scripts/validate.sh
 ```
+
+`./scripts/validate.sh` also validates the agent manifest, regenerates the showcase project when XcodeGen is installed, and builds the showcase when `xcodebuild` is available.
 
 ## Documentation
 

@@ -28,6 +28,9 @@ body:
       label: Area
       options:
         - Foundation Models adapter
+        - OpenAI adapter
+        - Anthropic adapter
+        - Provider routing
         - Prompting
         - Context and chunking
         - Local RAG

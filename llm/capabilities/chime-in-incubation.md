@@ -39,7 +39,7 @@ Chime In should keep:
 
 ## Source Of Truth
 
-- `../docs/08-chime-in-incubation.md`
+- `../../docs/08-chime-in-incubation.md`
 - Chime In docs remain source of truth for Chime In product behavior.
 
 ## Common Failure Modes
@@ -50,5 +50,5 @@ Chime In should keep:
 
 ## Read Next
 
-- `../docs/03-reliability-patterns.md`
-- `../docs/07-evaluation-and-diagnostics.md`
+- `../../docs/03-reliability-patterns.md`
+- `../../docs/07-evaluation-and-diagnostics.md`

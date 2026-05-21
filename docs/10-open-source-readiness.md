@@ -13,6 +13,8 @@ The repository is being structured as if it will become public later:
 - security placeholder
 - license placeholder
 - changelog
+- CI validation workflow
+- issue and pull request templates
 - ignored generated Xcode projects
 - example app generated from XcodeGen
 
@@ -24,9 +26,9 @@ Required:
 - replace `SECURITY.md` reporting placeholder
 - audit docs for private references
 - audit examples for Chime In data
-- add CI
-- add release validation
-- add DocC or API reference docs
+- harden CI against the final supported Xcode matrix
+- expand release validation beyond the current local script
+- expand DocC/API reference coverage
 - add screenshots or a small demo video
 - define semantic versioning policy
 - mark unstable APIs clearly

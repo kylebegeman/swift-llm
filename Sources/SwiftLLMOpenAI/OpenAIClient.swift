@@ -1,6 +1,9 @@
 import Foundation
 import SwiftLLM
 
+// MARK: - Public Transport
+
+/// HTTP request shape used by `OpenAIHTTPTransport`.
 public struct OpenAIHTTPRequest: Sendable {
   public var body: Data
   public var headers: [String: String]
@@ -30,6 +33,7 @@ public struct OpenAIHTTPRequest: Sendable {
   }
 }
 
+/// HTTP response shape returned by `OpenAIHTTPTransport`.
 public struct OpenAIHTTPResponse: Sendable {
   public var body: Data
   public var headers: [String: String]
@@ -46,6 +50,7 @@ public struct OpenAIHTTPResponse: Sendable {
   }
 }
 
+/// Streaming HTTP response that yields server-sent-event lines.
 public struct OpenAIHTTPStreamResponse: Sendable {
   public var headers: [String: String]
   public var lines: AsyncThrowingStream<String, any Error>
@@ -62,6 +67,7 @@ public struct OpenAIHTTPStreamResponse: Sendable {
   }
 }
 
+/// Injectable OpenAI transport for production networking, tests, and app-specific policy.
 public struct OpenAIHTTPTransport: Sendable {
   public var send: @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPResponse
   public var stream: @Sendable (OpenAIHTTPRequest) async throws -> OpenAIHTTPStreamResponse
@@ -128,6 +134,9 @@ public struct OpenAIHTTPTransport: Sendable {
   }
 }
 
+// MARK: - Client
+
+/// OpenAI Responses API adapter for the provider-neutral `LLMClient` protocol.
 public struct OpenAIClient: LLMClient {
   private var apiKey: String
   public var baseURL: URL
@@ -330,6 +339,7 @@ public struct OpenAIClient: LLMClient {
     continuation: AsyncThrowingStream<LLMStreamEvent, any Error>.Continuation,
     metadata: LLMProviderMetadata
   ) throws {
+    // OpenAI Responses streams encode text, tool calls, completion, and failures as typed SSE events.
     for dataLine in dataLines where dataLine != "[DONE]" && !dataLine.isEmpty {
       let data = Data(dataLine.utf8)
       let event = try JSONDecoder.provider.decode(OpenAIStreamEvent.self, from: data)
@@ -360,6 +370,8 @@ public struct OpenAIClient: LLMClient {
   }
 }
 
+// MARK: - AnyLLMClient Convenience
+
 extension AnyLLMClient {
   public static func openAI(
     apiKey: String,
@@ -379,6 +391,8 @@ extension AnyLLMClient {
     )
   }
 }
+
+// MARK: - Request Encoding
 
 private struct OpenAIResponsesRequest: Encodable {
   var model: String
@@ -567,6 +581,8 @@ private enum OpenAIToolChoice: Encodable {
   }
 }
 
+// MARK: - Response Decoding
+
 private struct OpenAIResponsePayload: Decodable {
   var error: OpenAIProviderError?
   var finishReason: String?
@@ -702,6 +718,8 @@ private struct OpenAIProviderError: Decodable {
   var message: String?
 }
 
+// MARK: - Request Mapping
+
 private extension LLMRequest {
   func openAIInputItems() throws -> [OpenAIInputItem] {
     let inputItems = try messages
@@ -778,6 +796,8 @@ private extension LLMResponseFormat {
     }
   }
 }
+
+// MARK: - JSON Coding
 
 private extension JSONDecoder {
   static var provider: JSONDecoder {

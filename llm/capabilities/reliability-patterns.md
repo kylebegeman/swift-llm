@@ -68,11 +68,11 @@ input
 
 ## Source Of Truth
 
-- `../docs/03-reliability-patterns.md`
-- `../docs/04-context-and-chunking.md`
-- `../docs/05-structured-generation.md`
-- `../docs/06-local-rag.md`
-- `../docs/07-evaluation-and-diagnostics.md`
+- `../../docs/03-reliability-patterns.md`
+- `../../docs/04-context-and-chunking.md`
+- `../../docs/05-structured-generation.md`
+- `../../docs/06-local-rag.md`
+- `../../docs/07-evaluation-and-diagnostics.md`
 
 ## Common Failure Modes
 
@@ -84,5 +84,5 @@ input
 
 ## Read Next
 
-- `../docs/09-roadmap.md`
-- `../docs/10-open-source-readiness.md`
+- `../../docs/09-roadmap.md`
+- `../../docs/10-open-source-readiness.md`

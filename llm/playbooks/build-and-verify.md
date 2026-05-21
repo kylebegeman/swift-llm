@@ -9,7 +9,8 @@ Use this playbook when building, testing, or checking the showcase.
 ```sh
 swift build
 swift test
-xcodegen generate --spec Examples/LLMShowcase/project.yml
+swift build -Xswiftc -warnings-as-errors
+./scripts/validate.sh
 ```
 
 `swift test` exercises the Foundation Models adapter through fakeable closures, so it does not require the Foundation Models framework to be present locally.
@@ -17,12 +18,15 @@ xcodegen generate --spec Examples/LLMShowcase/project.yml
 Open the generated showcase manually when UI changes matter:
 
 ```sh
+xcodegen generate --spec Examples/LLMShowcase/project.yml
 open Examples/LLMShowcase/LLMShowcase.xcodeproj
 ```
 
 ## Generated Files
 
 Generated `.xcodeproj` files are ignored and should not be committed.
+
+`./scripts/validate.sh` runs the package build, package tests, `llm/manifest.json` JSON/path validation, XcodeGen generation when available, and an unsigned showcase build when `xcodebuild` is available.
 
 ## Common Failures
 

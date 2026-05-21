@@ -9,6 +9,7 @@ Describe the developer or user problem this change addresses.
 ## Verification
 
 - [ ] `swift test`
+- [ ] `swift build -Xswiftc -warnings-as-errors`
 - [ ] `./scripts/validate.sh`
 - [ ] Docs updated when API, architecture, prompt behavior, or release policy changed
 - [ ] Evaluation cases updated when prompt, validation, fallback, or output quality changed
