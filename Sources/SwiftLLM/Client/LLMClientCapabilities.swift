@@ -45,6 +45,7 @@ public struct LLMClientCapabilities: Equatable, Sendable {
 
   public static let deterministicLocal = Self(
     supportedFeatures: [
+      .instructions,
       .jsonObjectResponse,
       .jsonSchemaResponse,
       .stopSequences,
@@ -66,14 +67,13 @@ public struct LLMClientCapabilities: Equatable, Sendable {
       .sessionTranscript,
       .streaming,
       .temperature,
-      .toolResults,
-      .tools,
     ],
     contextWindowTokens: 4_096
   )
 
   public static let openAIResponses = Self(
     supportedFeatures: [
+      .instructions,
       .jsonObjectResponse,
       .jsonSchemaResponse,
       .nativeJSONSchemaResponse,
@@ -88,6 +88,7 @@ public struct LLMClientCapabilities: Equatable, Sendable {
 
   public static let anthropicMessages = Self(
     supportedFeatures: [
+      .instructions,
       .jsonObjectResponse,
       .jsonSchemaResponse,
       .stopSequences,

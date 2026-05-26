@@ -138,6 +138,13 @@ struct SwiftLLMTests {
   }
 
   @Test
+  func emptyContextPlanDoesNotRequireGuidedGeneration() {
+    let plan = LLMContextPlan()
+
+    #expect(plan.requiredCapabilities.isEmpty)
+  }
+
+  @Test
   func promptCarriesContextPlanIntoProviderRequestCapabilities() {
     let contextPlan = LLMContextPlan(
       items: [
@@ -178,6 +185,23 @@ struct SwiftLLMTests {
   }
 
   // MARK: - Prompting
+
+  @Test
+  func compiledPromptIncludesResponseSchemaDescription() {
+    let prompt = CompiledPrompt(
+      contract: PromptContract(
+        id: "review",
+        version: "v1",
+        instructions: "Extract grounded fields.",
+        responseSchemaDescription: "Return JSON with summary and tasks."
+      ),
+      metadata: FoundationModelDefaults.metadata(promptVersion: "v1"),
+      userPrompt: "Transcript"
+    )
+
+    #expect(prompt.systemInstructions.contains("Extract grounded fields."))
+    #expect(prompt.systemInstructions.contains("Return JSON with summary and tasks."))
+  }
 
   @Test
   func exampleSelectorPrefersMatchingTags() {
@@ -412,6 +436,16 @@ struct SwiftLLMTests {
         .topP,
       ]
     )
+  }
+
+  @Test
+  func providerCapabilityPresetsReflectInstructionSupport() {
+    #expect(LLMClientCapabilities.deterministicLocal.supports(.instructions))
+    #expect(LLMClientCapabilities.openAIResponses.supports(.instructions))
+    #expect(LLMClientCapabilities.anthropicMessages.supports(.instructions))
+    #expect(LLMClientCapabilities.foundationModelsProviderNeutral.supports(.instructions))
+    #expect(!LLMClientCapabilities.foundationModelsProviderNeutral.supports(.tools))
+    #expect(!LLMClientCapabilities.foundationModelsProviderNeutral.supports(.toolResults))
   }
 
   @Test
@@ -725,6 +759,28 @@ struct SwiftLLMTests {
 
     #expect(result.partials.count == 2)
     #expect(result.output == "NEED TO FOLLOW UP. REVIEW PROMPT VERSIONS.")
+  }
+
+  @Test
+  func mapReducePipelinePropagatesCancellation() async {
+    let pipeline = MapReducePipeline<Int, Int, Int>(
+      map: { value in
+        try await Task.sleep(for: .seconds(5))
+        return ChunkProcessingResult(chunk: value, output: value)
+      },
+      reduce: { partials in
+        partials.map(\.output).reduce(0, +)
+      }
+    )
+    let task = Task {
+      try await pipeline.run(chunks: [1, 2, 3])
+    }
+
+    task.cancel()
+
+    await #expect(throws: CancellationError.self) {
+      try await task.value
+    }
   }
 
   // MARK: - Local Retrieval

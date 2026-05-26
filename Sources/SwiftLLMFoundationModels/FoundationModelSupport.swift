@@ -379,6 +379,7 @@ extension FoundationModelClient: LLMClient {
         instructions: Self.instructions(for: request),
         responseSchemaDescription: request.responseFormat.foundationPromptDescription ?? ""
       ),
+      contextPlan: request.contextPlan,
       metadata: responseMetadata,
       userPrompt: request.messages.foundationUserPrompt
     )

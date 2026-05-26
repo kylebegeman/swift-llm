@@ -228,9 +228,11 @@ public struct MapReducePipeline<Chunk: Sendable, Partial: Sendable, Final: Senda
     partials.reserveCapacity(chunks.count)
 
     for chunk in chunks {
+      try Task.checkCancellation()
       partials.append(try await map(chunk))
     }
 
+    try Task.checkCancellation()
     return MapReduceResult(
       partials: partials,
       output: try await reduce(partials)

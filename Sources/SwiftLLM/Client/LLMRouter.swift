@@ -363,6 +363,11 @@ public struct LLMPipeline: Sendable {
     let compiledPrompt = CompiledPrompt(
       contract: task.contract,
       examples: task.exampleSelector.select(from: task.examples),
+      contextPlan: Self.contextPlan(
+        task: task,
+        input: input,
+        ragResult: ragResult
+      ),
       metadata: metadata,
       userPrompt: userPrompt
     )
@@ -395,5 +400,64 @@ public struct LLMPipeline: Sendable {
     Retrieved context:
     \(retrievedContext)
     """
+  }
+
+  private static func contextPlan(
+    task: LLMPromptTask,
+    input: String,
+    ragResult: LocalRAGResult?
+  ) -> LLMContextPlan {
+    var items: [LLMContextItem] = []
+
+    if !task.contract.instructions.isEmpty {
+      items.append(
+        LLMContextItem(
+          id: "instructions",
+          surface: .instructions,
+          text: task.contract.instructions,
+          trust: .trustedSystem
+        )
+      )
+    }
+
+    if !task.contract.responseSchemaDescription.isEmpty {
+      items.append(
+        LLMContextItem(
+          id: "response-schema-description",
+          surface: .instructions,
+          text: task.contract.responseSchemaDescription,
+          trust: .trustedApp
+        )
+      )
+    }
+
+    items.append(
+      LLMContextItem(
+        id: "prompt",
+        surface: .prompt,
+        text: input,
+        trust: .userProvided
+      )
+    )
+
+    if let ragResult,
+       !ragResult.contextBlock.isEmpty
+    {
+      items.append(
+        LLMContextItem(
+          id: "retrieved-context",
+          surface: .retrievedContext,
+          text: ragResult.contextBlock,
+          trust: .trustedApp,
+          estimatedTokens: ragResult.packedSnippets.reduce(0) { $0 + $1.tokenCount }
+        )
+      )
+    }
+
+    return LLMContextPlan(
+      items: items,
+      toolExecutionPolicy: task.tools.isEmpty ? .noTools : .modelMayCall,
+      tools: task.tools
+    )
   }
 }

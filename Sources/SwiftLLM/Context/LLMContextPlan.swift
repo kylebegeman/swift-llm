@@ -107,7 +107,7 @@ public struct LLMContextPlan: Equatable, Sendable {
     if items.contains(where: { $0.surface == .instructions }) {
       capabilities.insert(.instructions)
     }
-    if includeGeneratedSchemaInPrompt || items.contains(where: { $0.surface == .generatedSchema }) {
+    if items.contains(where: { $0.surface == .generatedSchema }) {
       capabilities.insert(.guidedGeneration)
     }
     if sessionPolicy == .rehydrateTranscript || items.contains(where: { $0.surface == .sessionTranscript }) {

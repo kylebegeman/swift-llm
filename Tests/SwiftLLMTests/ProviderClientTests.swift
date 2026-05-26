@@ -782,7 +782,8 @@ struct ProviderClientTests {
         contract: PromptContract(
           id: "answer",
           version: "v2",
-          instructions: "Answer from local context."
+          instructions: "Answer from local context.",
+          responseSchemaDescription: "Return a concise answer with citations when evidence is available."
         ),
         retrievalQuery: { input in
           LocalRetrievalQuery(text: input, maxResults: 2)
@@ -794,6 +795,14 @@ struct ProviderClientTests {
     #expect(result.ragResult?.packedSnippets.count == 1)
     #expect(result.response.text.contains("Retrieved context:"))
     #expect(result.response.text.contains("Private note (note)"))
+    #expect(result.compiledPrompt.contextPlan == result.request.contextPlan)
+    #expect(result.request.contextPlan?.items.map(\.surface).contains(.retrievedContext) == true)
+    #expect(
+      result.request.contextPlan?.items.first(where: { $0.surface == .prompt })?.text
+        == "How should local retrieval handle citations?"
+    )
+    #expect(result.request.instructions?.contains("Return a concise answer with citations") == true)
+    #expect(!result.request.requiredCapabilities().contains(.guidedGeneration))
     #expect(result.request.metadata["promptID"] == "answer")
     #expect(result.compiledPrompt.metadata.promptVersion == "v2")
   }
@@ -802,12 +811,14 @@ struct ProviderClientTests {
 
   @Test
   func foundationModelClientCanRespondThroughCommonProtocol() async throws {
+    let capture = RequestCapture<FoundationModelGenerationRequest>()
     let client = FoundationModelClient(
       checkAvailability: { _, _ in .available },
       countTokens: { request in TokenCounter.latinHeuristic.count(request.text) },
       prewarm: { _ in },
       respond: { request in
-        FoundationModelGenerationResponse(
+        await capture.record(request)
+        return FoundationModelGenerationResponse(
           content: "Foundation response for \(request.prompt.userPrompt)",
           metadata: request.prompt.metadata,
           tokenUsage: LLMTokenUsage(
@@ -819,22 +830,37 @@ struct ProviderClientTests {
         )
       }
     )
+    let contextPlan = LLMContextPlan(
+      items: [
+        LLMContextItem(
+          id: "prompt",
+          surface: .prompt,
+          text: "a private transcript",
+          trust: .userProvided
+        )
+      ],
+      prewarmPromptPrefix: "a private"
+    )
 
     let response = try await client.respond(
       to: LLMRequest(
         instructions: "Summarize locally.",
         messages: [.user("a private transcript")],
         parameters: LLMGenerationParameters(maxOutputTokens: 48),
+        contextPlan: contextPlan,
         metadata: [
           "promptVersion": "local-summary-v2",
         ]
       )
     )
+    let capturedRequest = await capture.value()
 
     #expect(response.text == "Foundation response for a private transcript")
     #expect(response.metadata.providerKind == .appleFoundationModels)
     #expect(response.metadata.promptVersion == "local-summary-v2")
     #expect(response.tokenUsage?.estimatedOutputTokens == 5)
+    #expect(capturedRequest?.prompt.contextPlan == contextPlan)
+    #expect(capturedRequest?.prewarmPromptPrefix == "a private")
   }
 
   @Test
@@ -856,6 +882,9 @@ struct ProviderClientTests {
         )
       }
     )
+
+    #expect(!client.capabilities.supports(.tools))
+    #expect(!client.capabilities.supports(.toolResults))
 
     do {
       _ = try await client.respond(

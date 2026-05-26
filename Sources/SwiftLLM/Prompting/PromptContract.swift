@@ -107,17 +107,21 @@ public struct CompiledPrompt: Equatable, Sendable {
   }
 
   public var systemInstructions: String {
+    let baseInstructions = [
+      contract.instructions,
+      contract.responseSchemaDescription.isEmpty ? nil : contract.responseSchemaDescription,
+    ]
+    .compactMap { $0 }
+    .joined(separator: "\n\n")
     let exampleText = examples.map(\.promptFragment).joined(separator: "\n\n")
-    guard !exampleText.isEmpty else {
-      return contract.instructions
-    }
+    guard !exampleText.isEmpty else { return baseInstructions }
 
-    return """
-    \(contract.instructions)
-
-    Use these examples for style and boundary behavior only. Do not copy example facts unless they are present in the current input.
-
-    \(exampleText)
-    """
+    return [
+      baseInstructions,
+      "Use these examples for style and boundary behavior only. Do not copy example facts unless they are present in the current input.",
+      exampleText,
+    ]
+    .filter { !$0.isEmpty }
+    .joined(separator: "\n\n")
   }
 }
