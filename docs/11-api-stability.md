@@ -44,6 +44,7 @@ They are small value types and already have tests.
 These are useful but should remain easy to revise:
 
 - Foundation Models generation wrappers
+- Foundation Models native tool wrappers
 - provider-neutral client request/response types
 - OpenAI and Anthropic adapters
 - provider capabilities and router fallback policy
@@ -63,7 +64,6 @@ They should become stable after Chime In exercises them in real workflows.
 These should not be promised publicly until implemented and tested:
 
 - provider retry/backoff policy hooks
-- Foundation Models tool-call wrappers
 - SQLite/GRDB retrieval adapters
 - embedding-backed retrieval
 - automatic repair loops

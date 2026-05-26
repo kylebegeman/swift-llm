@@ -23,15 +23,15 @@ Use this card for availability, locale support, guided generation, tool calling,
 - `FoundationModelGenerationOptions`
 - `FoundationModelGenerationRequest`
 - `FoundationModelGenerationResponse`
+- `FoundationModelToolConfiguration` when `FoundationModels` is importable
 - `FoundationModelFailure`
 - `FoundationModelErrorNormalizer`
 - core `LLMContextPlan` metadata for instructions, prompt payloads, guided generation schemas,
   transcript rehydration, prewarm prefixes, and tool definitions
 
 It is now the typed adapter layer for availability, token counting, prewarming, text generation,
-guided generation where `FoundationModels` is importable, context-plan budgeting, error
-normalization, and response metadata. Tool-call wrappers and richer feedback capture are still future
-work.
+guided generation and native tool calls where `FoundationModels` is importable, context-plan
+budgeting, error normalization, and response metadata. Richer feedback capture is still future work.
 
 ## Source Of Truth
 

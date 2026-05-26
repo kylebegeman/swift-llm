@@ -33,7 +33,14 @@ Public tags should use semantic versioning:
 1.0.0
 ```
 
-Private incubation tags can use the same format to reduce later migration work.
+Private incubation tags can use release-candidate suffixes while changes are deployed before a full release:
+
+```text
+0.1.0-rc.1
+0.1.0-rc.2
+```
+
+Increment the numeric `rc` suffix from the latest tag for each deployable candidate.
 
 ## Changelog Sections
 

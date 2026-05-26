@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.0-rc.2
+
+- Split the OpenAI and Anthropic adapters into transport, request encoding, response decoding, streaming, and support files without changing their public client APIs.
+- Added typed Foundation Models native tool wrappers for text generation, guided generation, and prewarming behind `canImport(FoundationModels)`.
+- Documented the release-candidate tag flow for private incubation deploys.
+
 ## 0.1.0-rc.1
 
 - Initial private package scaffold.

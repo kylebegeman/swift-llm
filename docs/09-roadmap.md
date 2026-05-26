@@ -19,6 +19,7 @@ Build a real adapter around Foundation Models:
 - token counter adapter: implemented with exact counting when available and heuristic fallback otherwise
 - prewarm API: implemented
 - typed guided generation wrapper: implemented behind `canImport(FoundationModels)`
+- typed tool-call wrapper: implemented behind `canImport(FoundationModels)`
 - text generation wrapper: implemented
 - error normalization: implemented
 - context-window handling: normalized into fallback metadata
@@ -30,7 +31,7 @@ Acceptance criteria:
 - Chime In can call Foundation Models through SwiftLLM without owning framework-specific error handling.
 - Tests can exercise unavailable/fallback behavior without importing Foundation Models.
 
-Remaining refinements can happen in later phases: Foundation Models tool-call wrappers, feedback attachment capture, richer token accounting for instructions/schemas/tools, and typed diagnostics reports.
+Remaining refinements can happen in later phases: feedback attachment capture, richer token accounting for instructions/schemas/tools, typed diagnostics reports, and live-device tests for native tool-heavy sessions.
 
 ## Phase 2: Structured Generation Toolkit
 

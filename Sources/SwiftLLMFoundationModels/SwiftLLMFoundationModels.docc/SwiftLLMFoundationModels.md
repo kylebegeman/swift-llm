@@ -12,6 +12,7 @@ Use this product to:
 - prewarm Foundation Models sessions where available
 - count tokens with the system tokenizer when possible
 - generate strings and guided typed outputs
+- pass native Foundation Models `Tool` values through the typed adapter API
 - call Foundation Models through the shared `LLMClient` protocol
 - publish provider-neutral capabilities for routing decisions
 - map Foundation Models failures into fallback reasons

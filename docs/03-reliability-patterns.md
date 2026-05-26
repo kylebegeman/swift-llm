@@ -108,6 +108,8 @@ Good local sources:
 - app state summaries
 - deterministic search results
 
+Native Foundation Models tools remain useful for model-directed lookup, but SwiftLLM keeps them on the typed `SwiftLLMFoundationModels` API. Provider-neutral workflows should run local retrieval explicitly, add the result to the context plan, and use native tools only when the model genuinely needs to decide whether a lookup is relevant.
+
 ## Validation After Generation
 
 Every model-backed output that affects product state should be validated.

@@ -23,7 +23,7 @@ The package is private while it is incubated inside Chime In, but it is structur
 | Product | Purpose |
 |---|---|
 | `SwiftLLM` | Core client, prompt, context, fallback, validation, retrieval, router, and metadata primitives |
-| `SwiftLLMFoundationModels` | Apple Foundation Models availability, token counting, prewarming, generation, and error normalization |
+| `SwiftLLMFoundationModels` | Apple Foundation Models availability, token counting, prewarming, typed generation, native tools, and error normalization |
 | `SwiftLLMOpenAI` | OpenAI Responses API adapter with injectable response and streaming transport |
 | `SwiftLLMAnthropic` | Anthropic Messages API adapter with injectable response and streaming transport |
 | `SwiftLLMEvaluation` | Lightweight prompt regression and output assertion utilities |
@@ -57,6 +57,8 @@ let response = try await client.respond(
 API keys are provided by the app at runtime. SwiftLLM does not define a key storage policy.
 
 `LLMRouter` checks provider capabilities before dispatch, falls back only for retryable failures by default, and can continue streaming from a fallback provider when the primary fails before producing output.
+
+Native Foundation Models `Tool` values stay on the typed `SwiftLLMFoundationModels` API. Provider-neutral requests intentionally reject local tool execution unless an app calls the Foundation-specific wrapper with concrete `[any Tool]` values.
 
 ## Workflow Orchestration
 

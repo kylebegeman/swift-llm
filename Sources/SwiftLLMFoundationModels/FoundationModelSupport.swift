@@ -529,12 +529,66 @@ private extension JSONEncoder {
 
 #if canImport(FoundationModels)
 @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
+public struct FoundationModelToolConfiguration: Sendable {
+  public var tools: [any Tool]
+
+  public init(tools: [any Tool] = []) {
+    self.tools = tools
+  }
+
+  public static var none: Self {
+    Self()
+  }
+
+  public var isEmpty: Bool {
+    tools.isEmpty
+  }
+
+  public var toolNames: [String] {
+    tools.map { $0.name }
+  }
+
+  public var estimatedDefinitionTokens: Int {
+    guard !tools.isEmpty else { return 0 }
+    let renderedTools = tools
+      .map { "\($0.name)\n\($0.description)" }
+      .joined(separator: "\n\n")
+    return TokenCounter.latinHeuristic.count(renderedTools)
+  }
+}
+
+@available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
 extension FoundationModelClient {
+  public func prewarm(
+    _ request: FoundationModelPrewarmRequest,
+    tools: [any Tool]
+  ) throws {
+    try foundationModelPrewarm(
+      for: request,
+      toolConfiguration: FoundationModelToolConfiguration(tools: tools)
+    )
+  }
+
+  public func respond(
+    to request: FoundationModelGenerationRequest,
+    tools: [any Tool]
+  ) async throws -> FoundationModelGenerationResponse<String> {
+    try await foundationModelStringResponse(
+      for: request,
+      toolConfiguration: FoundationModelToolConfiguration(tools: tools)
+    )
+  }
+
   public func respond<Content: Generable & Sendable>(
     generating type: Content.Type,
-    request: FoundationModelGenerationRequest
+    request: FoundationModelGenerationRequest,
+    tools: [any Tool] = []
   ) async throws -> FoundationModelGenerationResponse<Content> {
-    try await foundationModelGeneratedResponse(generating: type, for: request)
+    try await foundationModelGeneratedResponse(
+      generating: type,
+      for: request,
+      toolConfiguration: FoundationModelToolConfiguration(tools: tools)
+    )
   }
 }
 
@@ -579,7 +633,8 @@ private func foundationModelTokenCount(
 
 @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
 private func foundationModelPrewarm(
-  for request: FoundationModelPrewarmRequest
+  for request: FoundationModelPrewarmRequest,
+  toolConfiguration: FoundationModelToolConfiguration = .none
 ) throws {
   let availability = foundationModelAvailability(locale: nil, useCase: request.useCase)
   guard availability.isAvailable
@@ -587,6 +642,7 @@ private func foundationModelPrewarm(
 
   let session = LanguageModelSession(
     model: foundationModel(useCase: request.useCase),
+    tools: toolConfiguration.tools,
     instructions: request.instructions
   )
   session.prewarm(promptPrefix: request.promptPrefix.map(Prompt.init))
@@ -594,9 +650,13 @@ private func foundationModelPrewarm(
 
 @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
 private func foundationModelStringResponse(
-  for request: FoundationModelGenerationRequest
+  for request: FoundationModelGenerationRequest,
+  toolConfiguration: FoundationModelToolConfiguration = .none
 ) async throws -> FoundationModelGenerationResponse<String> {
-  try await foundationModelResponse(for: request) { session, options in
+  try await foundationModelResponse(
+    for: request,
+    toolConfiguration: toolConfiguration
+  ) { session, options in
     let response = try await session.respond(
       to: Prompt(request.prompt.userPrompt),
       options: options
@@ -608,9 +668,13 @@ private func foundationModelStringResponse(
 @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
 private func foundationModelGeneratedResponse<Content: Generable & Sendable>(
   generating type: Content.Type,
-  for request: FoundationModelGenerationRequest
+  for request: FoundationModelGenerationRequest,
+  toolConfiguration: FoundationModelToolConfiguration = .none
 ) async throws -> FoundationModelGenerationResponse<Content> {
-  try await foundationModelResponse(for: request) { session, options in
+  try await foundationModelResponse(
+    for: request,
+    toolConfiguration: toolConfiguration
+  ) { session, options in
     let response = try await session.respond(
       to: Prompt(request.prompt.userPrompt),
       generating: type,
@@ -624,6 +688,7 @@ private func foundationModelGeneratedResponse<Content: Generable & Sendable>(
 @available(iOS 26.0, macOS 26.0, visionOS 26.0, *)
 private func foundationModelResponse<Content: Sendable>(
   for request: FoundationModelGenerationRequest,
+  toolConfiguration: FoundationModelToolConfiguration = .none,
   perform: (LanguageModelSession, GenerationOptions) async throws -> Content
 ) async throws -> FoundationModelGenerationResponse<Content> {
   let availability = foundationModelAvailability(locale: nil, useCase: request.useCase)
@@ -633,6 +698,7 @@ private func foundationModelResponse<Content: Sendable>(
   let model = foundationModel(useCase: request.useCase)
   let session = LanguageModelSession(
     model: model,
+    tools: toolConfiguration.tools,
     instructions: request.prompt.systemInstructions
   )
   if let prewarmPromptPrefix = request.prewarmPromptPrefix {
@@ -643,7 +709,7 @@ private func foundationModelResponse<Content: Sendable>(
   let options = request.options.foundationGenerationOptions
   let estimatedInputTokens = TokenCounter.latinHeuristic.count(
     request.prompt.systemInstructions + "\n\n" + request.prompt.userPrompt
-  )
+  ) + toolConfiguration.estimatedDefinitionTokens
   let measuredInputTokens = await foundationModelMeasuredTokenCount(
     request.prompt.userPrompt,
     model: model

@@ -51,7 +51,9 @@ Capability negotiation is intentionally explicit. Adapters publish support for t
 
 The common `respond(to:)` API compiles an `LLMRequest` into the existing Foundation Models request type. Typed guided generation remains available through the Foundation-specific API when Apple's `FoundationModels` framework can be imported.
 
-The provider-neutral Foundation adapter rejects features it cannot honor yet, including tool calls, top-p sampling, and stop sequences. That keeps a request from silently producing different behavior locally than it would with a cloud provider.
+Native Foundation Models tool execution is available through the typed Foundation-specific API by passing `[any Tool]` to `FoundationModelClient.respond(to:tools:)`, `respond(generating:request:tools:)`, or `prewarm(_:tools:)`. The small `FoundationModelToolConfiguration` wrapper preserves tool names and approximate definition-token cost for diagnostics without moving Apple framework types into the core target.
+
+The provider-neutral Foundation adapter rejects features it cannot honor generically, including tool calls, top-p sampling, and stop sequences. That keeps a request from silently producing different behavior locally than it would with a cloud provider.
 
 This is still the preferred default for offline Apple app flows.
 

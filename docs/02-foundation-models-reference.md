@@ -109,6 +109,15 @@ Tool calling is powerful but costly:
 
 SwiftLLM should encourage a small number of task-specific tools. If a tool is always needed, app code should often run it directly and pack the result into the prompt instead of asking the model to decide.
 
+`SwiftLLMFoundationModels` exposes a typed tool path behind `#if canImport(FoundationModels)`:
+
+- pass native `[any Tool]` values to `FoundationModelClient.respond(to:tools:)`
+- pass native tools to typed guided generation through `respond(generating:request:tools:)`
+- prewarm sessions with the same tool set through `prewarm(_:tools:)`
+- use `FoundationModelToolConfiguration` when an app needs a small value wrapper for names and estimated definition-token cost
+
+Provider-neutral `LLMClient` calls still reject tool requests for Foundation Models. That boundary is intentional: Apple's `Tool` protocol depends on concrete Swift associated types and app-owned code, so the generic adapter should not pretend it can execute arbitrary provider-neutral tools locally.
+
 ## Context And Agent-Like Planning
 
 Apple's session model gives SwiftLLM enough primitives to build focused, pseudo-agent workflows
@@ -128,9 +137,7 @@ context before generation. This keeps Chime In-style workflows explainable: app 
 search and deterministic analysis first, feed compact context to Foundation Models, and reserve native
 tool calling for cases where model-directed lookup is genuinely useful.
 
-The current package deliberately treats this as planning metadata. The generic Foundation Models
-client can carry context plans, budget them, and expose required capabilities; native `Tool` execution
-still belongs in typed adapter wrappers because Apple's `Tool` protocol requires concrete Swift types.
+The generic Foundation Models client deliberately treats tool items in a context plan as planning metadata. It can carry context plans, budget them, and expose required capabilities; native `Tool` execution is available only through the typed Foundation Models adapter because Apple's `Tool` protocol requires concrete Swift types.
 
 ## Safety and Guardrails
 
