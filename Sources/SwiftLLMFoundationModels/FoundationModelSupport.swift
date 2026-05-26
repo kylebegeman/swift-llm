@@ -159,7 +159,7 @@ public struct FoundationModelGenerationRequest: Equatable, Sendable {
   ) {
     self.options = options
     self.prompt = prompt
-    self.prewarmPromptPrefix = prewarmPromptPrefix
+    self.prewarmPromptPrefix = prewarmPromptPrefix ?? prompt.contextPlan?.prewarmPromptPrefix
     self.useCase = useCase
   }
 }
@@ -418,7 +418,7 @@ extension FoundationModelClient: LLMClient {
     {
       throw LLMClientError(
         reason: .unsupported,
-        debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter does not support tool calling yet."
+        debugDescription: "FoundationModelClient's provider-neutral LLMClient adapter describes tool-call context, but native FoundationModels tool execution still requires typed Tool wrappers."
       )
     }
 

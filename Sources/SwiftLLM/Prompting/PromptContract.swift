@@ -87,6 +87,7 @@ public struct ExampleSelector: Sendable {
 
 public struct CompiledPrompt: Equatable, Sendable {
   public var contract: PromptContract
+  public var contextPlan: LLMContextPlan?
   public var examples: [PromptExample]
   public var metadata: LLMProviderMetadata
   public var userPrompt: String
@@ -94,10 +95,12 @@ public struct CompiledPrompt: Equatable, Sendable {
   public init(
     contract: PromptContract,
     examples: [PromptExample] = [],
+    contextPlan: LLMContextPlan? = nil,
     metadata: LLMProviderMetadata,
     userPrompt: String
   ) {
     self.contract = contract
+    self.contextPlan = contextPlan
     self.examples = examples
     self.metadata = metadata
     self.userPrompt = userPrompt

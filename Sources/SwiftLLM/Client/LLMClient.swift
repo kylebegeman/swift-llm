@@ -295,6 +295,7 @@ public struct LLMToolCall: Codable, Equatable, Identifiable, Sendable {
 
 /// A complete provider-neutral generation request.
 public struct LLMRequest: Equatable, Sendable {
+  public var contextPlan: LLMContextPlan?
   public var instructions: String?
   public var messages: [LLMMessage]
   public var metadata: [String: String]
@@ -310,8 +311,10 @@ public struct LLMRequest: Equatable, Sendable {
     tools: [LLMToolDefinition] = [],
     toolChoice: LLMToolChoice? = nil,
     parameters: LLMGenerationParameters = LLMGenerationParameters(),
+    contextPlan: LLMContextPlan? = nil,
     metadata: [String: String] = [:]
   ) {
+    self.contextPlan = contextPlan
     self.instructions = instructions
     self.messages = messages
     self.metadata = metadata
@@ -336,6 +339,7 @@ public struct LLMRequest: Equatable, Sendable {
       tools: tools,
       toolChoice: toolChoice,
       parameters: parameters,
+      contextPlan: prompt.contextPlan,
       metadata: metadata.merging([
         "promptID": prompt.contract.id,
         "promptVersion": prompt.contract.version,

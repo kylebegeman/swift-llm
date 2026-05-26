@@ -103,6 +103,80 @@ struct SwiftLLMTests {
     #expect(packed.map(\.id) == ["a1", "b1", "c1", "a2"])
   }
 
+  @Test
+  func foundationModelContextPlanCapturesSessionSchemaAndToolCosts() {
+    let tool = LLMToolDefinition(
+      name: "lookup_related_notes",
+      description: "Return transcript-only related note snippets.",
+      inputSchema: [
+        "type": "object",
+        "properties": [
+          "query": [
+            "type": "string",
+          ],
+        ],
+      ]
+    )
+    let plan = LLMContextPlan.foundationModelExtraction(
+      instructions: "Extract grounded review data.",
+      userPrompt: "Transcript: I need to email Jamie tomorrow.",
+      schemaDescription: "Generate summary, tasks, dates, and decisions.",
+      tools: [tool],
+      sessionPolicy: .rehydrateTranscript,
+      prewarmPromptPrefix: "Transcript:"
+    )
+
+    #expect(plan.toolExecutionPolicy == .modelMayCall)
+    #expect(plan.requiredCapabilities.isSuperset(of: [
+      .guidedGeneration,
+      .instructions,
+      .prewarm,
+      .sessionTranscript,
+      .tools,
+    ]))
+    #expect(plan.budgetReport(budget: TokenBudget(contextLimit: 128, reservedResponseTokens: 16, safetyMarginTokens: 8)).estimatedInputTokens > 0)
+  }
+
+  @Test
+  func promptCarriesContextPlanIntoProviderRequestCapabilities() {
+    let contextPlan = LLMContextPlan(
+      items: [
+        LLMContextItem(
+          id: "instructions",
+          surface: .instructions,
+          text: "Use a narrow extraction role.",
+          trust: .trustedSystem,
+          estimatedTokens: 6
+        ),
+        LLMContextItem(
+          id: "schema",
+          surface: .generatedSchema,
+          text: "summary/tasks",
+          trust: .trustedApp,
+          estimatedTokens: 4
+        ),
+      ],
+      sessionPolicy: .statelessPerRequest,
+      includeGeneratedSchemaInPrompt: true
+    )
+    let prompt = CompiledPrompt(
+      contract: PromptContract(id: "review", version: "v5", instructions: "Extract."),
+      contextPlan: contextPlan,
+      metadata: LLMProviderMetadata(
+        privacyMode: .localOnly,
+        promptVersion: "v5",
+        providerDisplayName: "Apple Foundation Models",
+        providerKind: .appleFoundationModels
+      ),
+      userPrompt: "Transcript"
+    )
+    let request = LLMRequest(prompt: prompt)
+
+    #expect(request.contextPlan == contextPlan)
+    #expect(request.requiredCapabilities().contains(.guidedGeneration))
+    #expect(request.requiredCapabilities().contains(.instructions))
+  }
+
   // MARK: - Prompting
 
   @Test

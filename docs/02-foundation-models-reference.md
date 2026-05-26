@@ -109,6 +109,29 @@ Tool calling is powerful but costly:
 
 SwiftLLM should encourage a small number of task-specific tools. If a tool is always needed, app code should often run it directly and pack the result into the prompt instead of asking the model to decide.
 
+## Context And Agent-Like Planning
+
+Apple's session model gives SwiftLLM enough primitives to build focused, pseudo-agent workflows
+without adopting a heavyweight agent framework:
+
+- `Instructions` define trusted role and behavior context.
+- `Prompt` carries the user/app task payload.
+- `Transcript` can rehydrate an existing session history when a workflow really needs continuity.
+- `Tool` exposes app code for local retrieval or side-effect boundaries.
+- `@Generable`/guided generation constrains structured outputs.
+- `prewarm(promptPrefix:)` lets apps reduce latency for predictable prompt prefixes.
+
+SwiftLLM models this through `LLMContextPlan`. A context plan records which parts of a request occupy
+the model's context window, which parts are trusted, whether session transcript rehydration is
+expected, whether tool definitions are available to the model, and whether the app should prefetch
+context before generation. This keeps Chime In-style workflows explainable: app code can run local
+search and deterministic analysis first, feed compact context to Foundation Models, and reserve native
+tool calling for cases where model-directed lookup is genuinely useful.
+
+The current package deliberately treats this as planning metadata. The generic Foundation Models
+client can carry context plans, budget them, and expose required capabilities; native `Tool` execution
+still belongs in typed adapter wrappers because Apple's `Tool` protocol requires concrete Swift types.
+
 ## Safety and Guardrails
 
 Foundation Models includes built-in safety behavior, but app-specific safety is still required.

@@ -1,8 +1,12 @@
 /// A provider feature that can materially change request behavior.
 public enum LLMCapability: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
+  case guidedGeneration
+  case instructions
   case jsonObjectResponse
   case jsonSchemaResponse
   case nativeJSONSchemaResponse
+  case prewarm
+  case sessionTranscript
   case stopSequences
   case streaming
   case temperature
@@ -54,10 +58,16 @@ public struct LLMClientCapabilities: Equatable, Sendable {
 
   public static let foundationModelsProviderNeutral = Self(
     supportedFeatures: [
+      .guidedGeneration,
+      .instructions,
       .jsonObjectResponse,
       .jsonSchemaResponse,
+      .prewarm,
+      .sessionTranscript,
       .streaming,
       .temperature,
+      .toolResults,
+      .tools,
     ],
     contextWindowTokens: 4_096
   )
@@ -128,6 +138,10 @@ extension LLMRequest {
 
     if !parameters.stopSequences.isEmpty {
       capabilities.insert(.stopSequences)
+    }
+
+    if let contextPlan {
+      capabilities.formUnion(contextPlan.requiredCapabilities)
     }
 
     return capabilities
