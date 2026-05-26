@@ -11,6 +11,7 @@ It is not an attempt to make Apple Foundation Models behave like frontier cloud 
 - structured generation validation
 - evidence-aware candidate pipelines
 - source-aware local retrieval-augmented generation pipelines
+- typed workflow orchestration for deterministic analysis, retrieval, generation, validation, and fallback
 - capability-aware routing and deterministic fallbacks
 - prompt-version evaluation and redacted local diagnostics
 - local-only run metadata and diagnostics
@@ -56,6 +57,22 @@ let response = try await client.respond(
 API keys are provided by the app at runtime. SwiftLLM does not define a key storage policy.
 
 `LLMRouter` checks provider capabilities before dispatch, falls back only for retryable failures by default, and can continue streaming from a fallback provider when the primary fails before producing output.
+
+## Workflow Orchestration
+
+`LLMWorkflow` composes typed `LLMStep` values for app-owned AI workflows:
+
+```swift
+let workflow = LLMWorkflow(detectHints)
+  .then(retrieveLocalContext)
+  .then(buildPromptPlan)
+  .then(generateStructuredCandidate)
+  .then(validateGrounding)
+  .then(repairOrFallback)
+```
+
+The workflow layer records provider metadata, token/context reports, validation issues, fallback
+reasons, and source evidence. It does not choose tools autonomously or make hidden provider calls.
 
 ## Showcase
 

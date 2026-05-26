@@ -13,6 +13,7 @@ Use this product to:
 - split long text and transcript inputs
 - run map/reduce pipelines
 - retrieve and cite local context
+- compose typed workflows for deterministic analysis, retrieval, generation, validation, and fallback
 - call provider-neutral clients
 - route across provider fallbacks with capability checks
 - validate generated evidence
@@ -73,6 +74,14 @@ Use this product to:
 - ``StructuredGenerationCandidate``
 - ``StructuredGenerationValidator``
 - ``StructuredGenerationPipeline``
+
+### Workflow Orchestration
+
+- ``LLMWorkflow``
+- ``LLMStep``
+- ``LLMWorkflowContext``
+- ``LLMWorkflowResult``
+- ``LLMWorkflowEvent``
 
 ### Validation And Fallback
 

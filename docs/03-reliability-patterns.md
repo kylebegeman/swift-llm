@@ -19,6 +19,34 @@ user/app input
 
 SwiftLLM should adapt that pattern to Apple-native, offline workflows.
 
+## Workflow Orchestration
+
+`LLMWorkflow` and `LLMStep` provide a small sequential orchestration layer for this pattern.
+
+The workflow layer is intentionally not an autonomous agent framework. It does not decide which tools
+to call, store provider credentials, create background workers, or perform hidden model calls. Apps
+compose typed steps and provide every model-generation or retrieval closure explicitly.
+
+Useful step shapes are:
+
+- deterministic analysis before generation
+- local retrieval and context packing through `LocalRAGPipeline`
+- context-plan construction through `LLMContextPlan` and `CompiledPrompt`
+- model generation that returns `GenerationCandidate` or `StructuredGenerationCandidate`
+- validation and grounding through `StructuredGenerationValidator` and `GroundingValidator`
+- repair or deterministic fallback through existing structured-generation policies
+
+`LLMWorkflowResult` preserves final output plus diagnostics needed for production review:
+
+- captured intermediate outputs when requested
+- provider metadata and token usage
+- context budget reports
+- fallback reason
+- validation issues
+- source references, retrieval results, and evidence spans
+
+This is the package-level shape Chime In should adopt around its app-owned extraction draft.
+
 ## Narrow Tasks
 
 The on-device model should receive one clear job at a time.

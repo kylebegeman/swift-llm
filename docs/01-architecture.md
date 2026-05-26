@@ -60,6 +60,8 @@ The core package does not import Foundation Models. That keeps the core abstract
 - dependency-free keyword retrieval for tests and demos
 - local RAG pipeline composition
 - high-level prompt/RAG pipeline composition
+- typed workflow orchestration over deterministic analysis, retrieval, context planning, generation,
+  validation, and fallback
 - structured generation schemas and contracts
 - evidence sources and spans
 - structured candidate wrappers
@@ -183,6 +185,7 @@ SwiftLLM should own:
 - prompt and model-run metadata
 - chunking and context packing
 - schema/generation orchestration
+- app-composed workflow primitives
 - grounding and validation primitives
 - evaluation harnesses
 - local diagnostics models

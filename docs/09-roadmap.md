@@ -141,6 +141,31 @@ Acceptance criteria:
 
 Remaining refinements can happen in later phases: provider-specific structured output affordances, stricter schema validation, request/response trace redaction, retry/backoff policy hooks, and richer token/cost accounting for tool-heavy conversations.
 
+## Phase 6.5: Workflow Orchestration
+
+Status: completed for the first Chime In adoption slice.
+
+Add a small production orchestration layer over the existing primitives:
+
+- typed sequential workflow runner: implemented through `LLMWorkflow`
+- composable steps: implemented through `LLMStep`
+- deterministic analysis step helper: implemented
+- local retrieval/context packing step helper: implemented through `LocalRAGPipeline`
+- context planning step helper: implemented through `CompiledPrompt` and `LLMContextPlan`
+- structured generation step helper: implemented through `GenerationCandidate` and `StructuredGenerationCandidate`
+- validation step helper: implemented through `StructuredGenerationValidator`
+- repair/fallback step helper: implemented through `StructuredGenerationRepairPolicy`, `StructuredGenerationFallbackPolicy`, and `FallbackReason`
+- workflow diagnostics: implemented through `LLMWorkflowResult`, `LLMWorkflowEvent`, intermediate output capture, provider metadata, token/context reports, validation issues, evidence spans, and source references
+
+Acceptance criteria:
+
+- Chime In can express its extraction path without creating a broad public agent framework.
+- Hosted Plus prompt shaping can remain backend-owned because the workflow layer only runs app-provided closures.
+- Local-first fallback remains explicit and testable.
+
+Remaining refinements can happen after Chime In integration: better dynamic fallback closures,
+typed timestamp evidence helpers, richer repair-loop policies, and DocC examples.
+
 ## Phase 7: Open Source Preparation
 
 Before public release:

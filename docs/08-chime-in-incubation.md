@@ -42,8 +42,11 @@ The migration should be incremental. Do not yank app code into the package whole
 8. Run generic validators from SwiftLLM before applying Chime-specific task/date/decision validation.
 9. Use `MapReducePipeline` for long recordings once per-chunk extraction is wired.
 10. Use `LocalRetriever` and `LocalRAGPipeline` at the boundary for local question-answering or cross-recording recall, while keeping the actual Chime storage/index implementation in Chime In.
-11. Move reusable evaluation harness logic into `SwiftLLMEvaluation`, using `PromptVersionEvaluationReport` and `LocalDebugBundle` for local prompt-change reviews.
-12. Keep `RecordingReviewDraft` and Chime-specific validators in Chime In.
+11. Compose the extraction path with `LLMWorkflow`:
+    deterministic transcript hints -> local retrieval -> context plan -> structured generation ->
+    grounding validation -> deterministic fallback.
+12. Move reusable evaluation harness logic into `SwiftLLMEvaluation`, using `PromptVersionEvaluationReport` and `LocalDebugBundle` for local prompt-change reviews.
+13. Keep `RecordingReviewDraft` and Chime-specific validators in Chime In.
 
 ## Keep In Chime In
 
@@ -70,6 +73,8 @@ These can move when they are app-neutral:
 - transcript segment chunking and timestamp-preserving chunk metadata
 - structured candidate and evidence wrappers
 - map/reduce orchestration primitives
+- typed workflow orchestration for deterministic analysis, retrieval, context planning, generation,
+  validation, and fallback
 - local retrieval value types
 - local retrieval protocol and citation rendering
 - deterministic grounding validators

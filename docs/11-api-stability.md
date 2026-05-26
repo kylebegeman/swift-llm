@@ -49,6 +49,7 @@ These are useful but should remain easy to revise:
 - provider capabilities and router fallback policy
 - router and high-level LLM pipeline
 - structured generation pipeline
+- workflow orchestration primitives (`LLMWorkflow`, `LLMStep`, `LLMWorkflowResult`, and workflow diagnostics)
 - transcript chunking
 - local RAG pipeline
 - context packing strategies
@@ -75,6 +76,8 @@ These should not be promised publicly until implemented and tested:
 - Keep app-specific language out of public API names.
 - Keep provider-specific names inside provider-specific targets.
 - Do not use "magic", "agent", or "chain" terminology unless the API genuinely models that concept.
+- Prefer "workflow" and "step" for deterministic app-composed orchestration. Reserve "agent" for a
+  future API only if the package actually owns autonomous planning, tool choice, and execution loops.
 
 ## Deprecation Rules
 

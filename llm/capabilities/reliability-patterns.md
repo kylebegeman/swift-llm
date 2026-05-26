@@ -39,6 +39,11 @@ input
 - `KeywordLocalRetriever`
 - `CitationContextRenderer`
 - `LocalRAGPipeline`
+- `LLMWorkflow`
+- `LLMStep`
+- `LLMWorkflowContext`
+- `LLMWorkflowResult`
+- `LLMWorkflowEvent`
 - `LLMClientCapabilities`
 - `LLMRouterFallbackPolicy`
 - `MapReducePipeline`
