@@ -106,6 +106,46 @@ struct LocalRetrievalTests {
   }
 
   @Test
+  func requiredSourcesOverrideAllowedSourcesButNotExclusions() async throws {
+    let retriever = KeywordLocalRetriever(
+      documents: [
+        RetrievableDocument(
+          id: "allowed",
+          text: "Allowed source mentions meeting notes.",
+          displayName: "Allowed note",
+          kind: "note"
+        ),
+        RetrievableDocument(
+          id: "required",
+          text: "Required source should remain available.",
+          displayName: "Required note",
+          kind: "note"
+        ),
+        RetrievableDocument(
+          id: "excluded",
+          text: "Excluded source should stay hidden.",
+          displayName: "Excluded note",
+          kind: "note"
+        ),
+      ],
+      maxTokensPerSnippet: 32
+    )
+
+    let result = try await retriever.retrieve(
+      LocalRetrievalQuery(
+        text: "",
+        maxResults: 4,
+        allowedSourceIDs: ["allowed"],
+        excludedSourceIDs: ["excluded"],
+        requiredSourceIDs: ["required", "excluded"]
+      )
+    )
+
+    #expect(result.snippets.map(\.sourceID) == ["required"])
+    #expect(result.sources.map(\.id) == ["required"])
+  }
+
+  @Test
   func localRAGPipelinePacksContextAndBuildsCitations() async throws {
     let retriever = KeywordLocalRetriever(
       documents: [

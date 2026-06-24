@@ -168,11 +168,15 @@ struct OpenAIOutputContent: Decodable {
 
 struct OpenAIUsage: Decodable {
   var inputTokens: Int?
+  var inputTokensDetails: OpenAIInputTokensDetails?
   var outputTokens: Int?
+  var outputTokensDetails: OpenAIOutputTokensDetails?
 
   enum CodingKeys: String, CodingKey {
     case inputTokens = "input_tokens"
+    case inputTokensDetails = "input_tokens_details"
     case outputTokens = "output_tokens"
+    case outputTokensDetails = "output_tokens_details"
   }
 
   var tokenUsage: LLMTokenUsage {
@@ -180,8 +184,26 @@ struct OpenAIUsage: Decodable {
       estimatedInputTokens: inputTokens ?? 0,
       estimatedOutputTokens: outputTokens ?? 0,
       measuredInputTokens: inputTokens,
-      measuredOutputTokens: outputTokens
+      measuredOutputTokens: outputTokens,
+      cachedInputTokens: inputTokensDetails?.cachedTokens,
+      reasoningTokens: outputTokensDetails?.reasoningTokens
     )
+  }
+}
+
+struct OpenAIInputTokensDetails: Decodable {
+  var cachedTokens: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case cachedTokens = "cached_tokens"
+  }
+}
+
+struct OpenAIOutputTokensDetails: Decodable {
+  var reasoningTokens: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case reasoningTokens = "reasoning_tokens"
   }
 }
 

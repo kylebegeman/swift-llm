@@ -37,7 +37,13 @@ struct OpenAIClientTests {
               ],
               "usage": {
                 "input_tokens": 12,
-                "output_tokens": 4
+                "input_tokens_details": {
+                  "cached_tokens": 6
+                },
+                "output_tokens": 4,
+                "output_tokens_details": {
+                  "reasoning_tokens": 2
+                }
               }
             }
             """.utf8
@@ -113,6 +119,8 @@ struct OpenAIClientTests {
     #expect(response.toolCalls.first?.name == "lookup_note")
     #expect(response.message.toolCalls.first?.id == "call_1")
     #expect(response.tokenUsage?.measuredInputTokens == 12)
+    #expect(response.tokenUsage?.cachedInputTokens == 6)
+    #expect(response.tokenUsage?.reasoningTokens == 2)
     #expect(response.metadata.providerKind == .openAI)
     #expect(response.metadata.promptVersion == "summary-v3")
   }
@@ -138,7 +146,7 @@ struct OpenAIClientTests {
               "",
               #"data: {"type":"response.output_text.delta","delta":"stream"}"#,
               "",
-              #"data: {"type":"response.completed","response":{"id":"resp_stream","status":"completed","output_text":"Hello stream","usage":{"input_tokens":3,"output_tokens":2}}}"#,
+              #"data: {"type":"response.completed","response":{"id":"resp_stream","status":"completed","output_text":"Hello stream","usage":{"input_tokens":3,"input_tokens_details":{"cached_tokens":1},"output_tokens":2,"output_tokens_details":{"reasoning_tokens":1}}}}"#,
               "",
             ])
           )
@@ -163,6 +171,8 @@ struct OpenAIClientTests {
     #expect(events.completedResponse?.text == "Hello stream")
     #expect(events.completedResponse?.metadata.promptVersion == "stream-v1")
     #expect(events.completedResponse?.tokenUsage?.measuredOutputTokens == 2)
+    #expect(events.completedResponse?.tokenUsage?.cachedInputTokens == 1)
+    #expect(events.completedResponse?.tokenUsage?.reasoningTokens == 1)
   }
 
   @Test

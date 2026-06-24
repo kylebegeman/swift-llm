@@ -131,9 +131,11 @@ extension AnthropicClient {
 
 private struct AnthropicStreamState {
   var accumulatedText = ""
+  var cacheReadInputTokens: Int?
   var finishReason: LLMFinishReason?
   var inputTokens: Int?
   var outputTokens: Int?
+  var thinkingTokens: Int?
   private var completedToolCalls: [LLMToolCall] = []
   private var pendingToolCalls: [Int: PendingAnthropicToolCall] = [:]
 
@@ -147,16 +149,24 @@ private struct AnthropicStreamState {
       estimatedInputTokens: inputTokens ?? 0,
       estimatedOutputTokens: outputTokens ?? 0,
       measuredInputTokens: inputTokens,
-      measuredOutputTokens: outputTokens
+      measuredOutputTokens: outputTokens,
+      cachedInputTokens: cacheReadInputTokens,
+      reasoningTokens: thinkingTokens
     )
   }
 
   mutating func recordUsage(_ usage: AnthropicUsage?) {
+    if let cacheReadInputTokens = usage?.cacheReadInputTokens {
+      self.cacheReadInputTokens = cacheReadInputTokens
+    }
     if let inputTokens = usage?.inputTokens {
       self.inputTokens = inputTokens
     }
     if let outputTokens = usage?.outputTokens {
       self.outputTokens = outputTokens
+    }
+    if let thinkingTokens = usage?.outputTokensDetails?.thinkingTokens {
+      self.thinkingTokens = thinkingTokens
     }
   }
 

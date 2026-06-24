@@ -119,12 +119,18 @@ struct AnthropicContentBlock: Decodable {
 }
 
 struct AnthropicUsage: Decodable {
+  var cacheCreationInputTokens: Int?
+  var cacheReadInputTokens: Int?
   var inputTokens: Int?
   var outputTokens: Int?
+  var outputTokensDetails: AnthropicOutputTokensDetails?
 
   enum CodingKeys: String, CodingKey {
+    case cacheCreationInputTokens = "cache_creation_input_tokens"
+    case cacheReadInputTokens = "cache_read_input_tokens"
     case inputTokens = "input_tokens"
     case outputTokens = "output_tokens"
+    case outputTokensDetails = "output_tokens_details"
   }
 
   var tokenUsage: LLMTokenUsage {
@@ -132,8 +138,18 @@ struct AnthropicUsage: Decodable {
       estimatedInputTokens: inputTokens ?? 0,
       estimatedOutputTokens: outputTokens ?? 0,
       measuredInputTokens: inputTokens,
-      measuredOutputTokens: outputTokens
+      measuredOutputTokens: outputTokens,
+      cachedInputTokens: cacheReadInputTokens,
+      reasoningTokens: outputTokensDetails?.thinkingTokens
     )
+  }
+}
+
+struct AnthropicOutputTokensDetails: Decodable {
+  var thinkingTokens: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case thinkingTokens = "thinking_tokens"
   }
 }
 

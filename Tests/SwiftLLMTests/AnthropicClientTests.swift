@@ -42,8 +42,13 @@ struct AnthropicClientTests {
               ],
               "stop_reason": "tool_use",
               "usage": {
+                "cache_creation_input_tokens": 2,
+                "cache_read_input_tokens": 4,
                 "input_tokens": 10,
-                "output_tokens": 5
+                "output_tokens": 5,
+                "output_tokens_details": {
+                  "thinking_tokens": 3
+                }
               }
             }
             """.utf8
@@ -97,6 +102,8 @@ struct AnthropicClientTests {
     #expect(response.toolCalls.first?.name == "lookup_note")
     #expect(response.message.toolCalls.first?.id == "toolu_1")
     #expect(response.tokenUsage?.measuredOutputTokens == 5)
+    #expect(response.tokenUsage?.cachedInputTokens == 4)
+    #expect(response.tokenUsage?.reasoningTokens == 3)
     #expect(response.metadata.providerKind == .anthropic)
     #expect(response.metadata.promptVersion == "summary-v4")
   }
@@ -163,7 +170,7 @@ struct AnthropicClientTests {
           AnthropicHTTPStreamResponse(
             statusCode: 200,
             lines: lineStream([
-              #"data: {"type":"message_start","message":{"usage":{"input_tokens":8,"output_tokens":1}}}"#,
+              #"data: {"type":"message_start","message":{"usage":{"cache_creation_input_tokens":2,"cache_read_input_tokens":3,"input_tokens":8,"output_tokens":1,"output_tokens_details":{"thinking_tokens":1}}}}"#,
               "",
               #"data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_stream","name":"lookup_note","input":{}}}"#,
               "",
@@ -173,7 +180,7 @@ struct AnthropicClientTests {
               "",
               #"data: {"type":"content_block_stop","index":0}"#,
               "",
-              #"data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":9}}"#,
+              #"data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"output_tokens":9,"output_tokens_details":{"thinking_tokens":4}}}"#,
               "",
               #"data: {"type":"message_stop"}"#,
               "",
@@ -206,6 +213,8 @@ struct AnthropicClientTests {
     #expect(events.completedResponse?.toolCalls.map(\.id) == ["toolu_stream"])
     #expect(events.completedResponse?.tokenUsage?.measuredInputTokens == 8)
     #expect(events.completedResponse?.tokenUsage?.measuredOutputTokens == 9)
+    #expect(events.completedResponse?.tokenUsage?.cachedInputTokens == 3)
+    #expect(events.completedResponse?.tokenUsage?.reasoningTokens == 4)
   }
 
   @Test
