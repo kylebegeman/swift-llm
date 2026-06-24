@@ -102,6 +102,27 @@ Source-diverse packing interleaves high-scoring snippets from different sources 
 
 `RetrievedSnippet` now carries source display metadata, source kind, optional integer character ranges, and an `isRequired` flag. Required snippets are considered before optional snippets, while still respecting the token budget.
 
+## Context Compiler
+
+`LLMContextCompiler` is the reusable assembly step for prompt contracts,
+examples, user input, retrieved snippets, tool metadata, session policy, and
+Foundation Models context hints.
+
+The compiler:
+
+- estimates fixed input tokens for instructions, response schema text, examples, user input, tools, and app-provided context items
+- reserves those fixed tokens before packing retrieved snippets
+- renders packed snippets with citation markers
+- returns the dropped snippets for debugging and UI feedback
+- builds the `LLMContextPlan` used by provider-neutral requests
+- builds a `CompiledPrompt` whose user prompt includes retrieved context when requested
+- returns a context budget report and source context for structured validation
+
+`LLMPipeline` now uses `LLMContextCompiler` internally. Apps can also call the
+compiler directly when they need to preview context pressure, show dropped
+snippets, preflight a request, or assemble a Foundation Models request before
+the OS 27 SDK-specific APIs are available.
+
 ## Chime In Implications
 
 For Chime In, the long transcript strategy should be:

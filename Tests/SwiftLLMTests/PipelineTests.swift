@@ -51,6 +51,8 @@ struct PipelineTests {
     )
 
     #expect(result.ragResult?.packedSnippets.count == 1)
+    #expect(result.contextCompilation?.packedSnippets.count == 1)
+    #expect(result.contextCompilation?.budgetReport.estimatedInputTokens ?? 0 > 0)
     #expect(result.response.text.contains("Retrieved context:"))
     #expect(result.response.text.contains("Private note (note)"))
     #expect(result.compiledPrompt.contextPlan == result.request.contextPlan)

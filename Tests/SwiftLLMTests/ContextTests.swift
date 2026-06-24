@@ -178,4 +178,72 @@ struct ContextTests {
     #expect(request.requiredCapabilities().contains(.guidedGeneration))
     #expect(request.requiredCapabilities().contains(.instructions))
   }
+
+  @Test
+  func contextCompilerReservesFixedTokensBeforePackingRetrieval() {
+    let counter = TokenCounter { text in
+      text.split(whereSeparator: \.isWhitespace).count
+    }
+    let compiler = LLMContextCompiler(
+      budget: TokenBudget(
+        contextLimit: 20,
+        reservedResponseTokens: 4,
+        safetyMarginTokens: 2
+      ),
+      counter: counter,
+      packingStrategy: .scoreDescending
+    )
+    let result = compiler.compile(
+      LLMContextCompilationInput(
+        contract: PromptContract(
+          id: "review",
+          version: "v1",
+          instructions: "Extract tasks",
+          responseSchemaDescription: "Return JSON"
+        ),
+        metadata: LLMProviderMetadata(
+          privacyMode: .localOnly,
+          promptVersion: "v1",
+          providerDisplayName: "Local",
+          providerKind: .deterministicLocal
+        ),
+        userPrompt: "Need private summary",
+        retrievedSnippets: [
+          RetrievedSnippet(
+            id: "required",
+            sourceID: "note",
+            text: "Required source stays within budget.",
+            tokenCount: 6,
+            score: 0.2,
+            sourceDisplayName: "Required Source",
+            isRequired: true
+          ),
+          RetrievedSnippet(
+            id: "high",
+            sourceID: "doc",
+            text: "High score but too large.",
+            tokenCount: 4,
+            score: 0.9
+          ),
+          RetrievedSnippet(
+            id: "small",
+            sourceID: "memo",
+            text: "Small optional.",
+            tokenCount: 3,
+            score: 0.4
+          ),
+        ],
+        schemaSurface: .generatedSchema
+      )
+    )
+
+    #expect(result.fixedInputTokens == 7)
+    #expect(result.packedSnippets.map(\.id) == ["required"])
+    #expect(result.droppedSnippets.map(\.id) == ["high", "small"])
+    #expect(result.budgetReport.estimatedInputTokens == 13)
+    #expect(result.plan.requiredCapabilities.contains(.guidedGeneration))
+    #expect(result.compiledPrompt.userPrompt.contains("Retrieved context:"))
+    #expect(result.compiledPrompt.userPrompt.contains("[1] Required Source"))
+    #expect(result.plan.items.map(\.surface).contains(.retrievedContext))
+  }
 }

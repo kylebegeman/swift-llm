@@ -185,6 +185,10 @@ let packer = ContextPacker(
 let packed = packer.pack(snippets: snippets, reservedInputTokens: 300)
 ```
 
+Use `LLMContextCompiler` when you want the package to assemble the full prompt
+plan: instructions, examples, user input, retrieved snippets, schema text, tool
+metadata, budget reporting, and dropped-snippet diagnostics.
+
 ## Local RAG
 
 SwiftLLM includes dependency-free retrieval primitives. Apps can bring their own index, SQLite store, Spotlight search, embeddings, or document pipeline by conforming to `LocalRetriever`.

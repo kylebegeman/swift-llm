@@ -384,6 +384,7 @@ public struct LLMPromptTask: Sendable {
 
 public struct LLMPipelineResult: Sendable {
   public var compiledPrompt: CompiledPrompt
+  public var contextCompilation: LLMContextCompilationResult?
   public var ragResult: LocalRAGResult?
   public var request: LLMRequest
   public var response: LLMResponse
@@ -392,9 +393,11 @@ public struct LLMPipelineResult: Sendable {
     compiledPrompt: CompiledPrompt,
     request: LLMRequest,
     response: LLMResponse,
-    ragResult: LocalRAGResult? = nil
+    ragResult: LocalRAGResult? = nil,
+    contextCompilation: LLMContextCompilationResult? = nil
   ) {
     self.compiledPrompt = compiledPrompt
+    self.contextCompilation = contextCompilation
     self.ragResult = ragResult
     self.request = request
     self.response = response
@@ -421,31 +424,43 @@ public struct LLMPipeline: Sendable {
     metadata.promptVersion = task.contract.version
 
     var ragResult: LocalRAGResult?
-    var userPrompt = input
-    if let retrievalQuery = task.retrievalQuery?(input),
+    var retrieval: LocalRetrievalResult?
+    var retrievalQuery: LocalRetrievalQuery?
+    if let query = task.retrievalQuery?(input),
        let ragPipeline
     {
-      let result = try await ragPipeline.run(query: retrievalQuery)
-      ragResult = result
-      if !result.contextBlock.isEmpty {
-        userPrompt = Self.prompt(
-          input: input,
-          retrievedContext: result.contextBlock
-        )
-      }
+      retrievalQuery = query
+      retrieval = try await ragPipeline.retriever.retrieve(query)
     }
 
-    let compiledPrompt = CompiledPrompt(
-      contract: task.contract,
-      examples: task.exampleSelector.select(from: task.examples),
-      contextPlan: Self.contextPlan(
-        task: task,
-        input: input,
-        ragResult: ragResult
-      ),
-      metadata: metadata,
-      userPrompt: userPrompt
+    let compiler = LLMContextCompiler(
+      budget: ragPipeline?.packer.budget ?? TokenBudget(),
+      packingStrategy: ragPipeline?.packer.strategy ?? .scoreDescending,
+      renderer: ragPipeline?.renderer ?? CitationContextRenderer(),
+      additionalReservedInputTokens: ragPipeline?.reservedInputTokens ?? 0
     )
+    let contextCompilation = compiler.compile(
+      LLMContextCompilationInput(
+        contract: task.contract,
+        metadata: metadata,
+        userPrompt: input,
+        examples: task.exampleSelector.select(from: task.examples),
+        retrievedSnippets: retrieval?.snippets ?? [],
+        tools: task.tools
+      )
+    )
+    let compiledPrompt = contextCompilation.compiledPrompt
+    if let retrievalQuery,
+       let retrieval
+    {
+      ragResult = LocalRAGResult(
+        query: retrievalQuery,
+        retrieval: retrieval,
+        packedSnippets: contextCompilation.packedSnippets,
+        contextBlock: contextCompilation.contextBlock,
+        citations: contextCompilation.citations
+      )
+    }
     let request = LLMRequest(
       prompt: compiledPrompt,
       responseFormat: task.responseFormat,
@@ -460,79 +475,8 @@ public struct LLMPipeline: Sendable {
       compiledPrompt: compiledPrompt,
       request: request,
       response: response,
-      ragResult: ragResult
-    )
-  }
-
-  private static func prompt(
-    input: String,
-    retrievedContext: String
-  ) -> String {
-    """
-    User input:
-    \(input)
-
-    Retrieved context:
-    \(retrievedContext)
-    """
-  }
-
-  private static func contextPlan(
-    task: LLMPromptTask,
-    input: String,
-    ragResult: LocalRAGResult?
-  ) -> LLMContextPlan {
-    var items: [LLMContextItem] = []
-
-    if !task.contract.instructions.isEmpty {
-      items.append(
-        LLMContextItem(
-          id: "instructions",
-          surface: .instructions,
-          text: task.contract.instructions,
-          trust: .trustedSystem
-        )
-      )
-    }
-
-    if !task.contract.responseSchemaDescription.isEmpty {
-      items.append(
-        LLMContextItem(
-          id: "response-schema-description",
-          surface: .instructions,
-          text: task.contract.responseSchemaDescription,
-          trust: .trustedApp
-        )
-      )
-    }
-
-    items.append(
-      LLMContextItem(
-        id: "prompt",
-        surface: .prompt,
-        text: input,
-        trust: .userProvided
-      )
-    )
-
-    if let ragResult,
-       !ragResult.contextBlock.isEmpty
-    {
-      items.append(
-        LLMContextItem(
-          id: "retrieved-context",
-          surface: .retrievedContext,
-          text: ragResult.contextBlock,
-          trust: .trustedApp,
-          estimatedTokens: ragResult.packedSnippets.reduce(0) { $0 + $1.tokenCount }
-        )
-      )
-    }
-
-    return LLMContextPlan(
-      items: items,
-      toolExecutionPolicy: task.tools.isEmpty ? .noTools : .modelMayCall,
-      tools: task.tools
+      ragResult: ragResult,
+      contextCompilation: contextCompilation
     )
   }
 }
