@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Split workflow, structured generation, Foundation Models, and test coverage into smaller feature-focused files without changing behavior.
+- Added `LLMRunReceipt`, `LLMInstrumentedResponse`, router receipt callbacks, and redacted receipt support in `LocalDebugBundle`.
+- Added `LLMContextCompiler` for fixed-cost context accounting, retrieved-snippet packing, dropped-snippet diagnostics, citation rendering, context plans, and compiled prompts.
+- Updated `LLMPipeline` to use `LLMContextCompiler` internally and expose context compilation diagnostics.
+- Added `LLMEndpointRegistry`, `LLMEndpoint`, and `LLMRoutingPlan` for provider-neutral endpoint registration and router construction.
+- Added Foundation Models pre-SDK readiness types for execution targets, Private Cloud Compute runtime profiles, quota status, reasoning effort, and dynamic context-size hints.
+- Added cached-input and reasoning-token accounting to `LLMTokenUsage`, run receipts, and evaluation metrics.
 - Replaced the license placeholder with Apache-2.0.
 - Replaced the security placeholder with a public vulnerability reporting policy and LLM-specific security scope.
 - Reworked the README with badges, diagrams, quick-start examples, provider boundaries, evaluation guidance, and WWDC26 readiness notes.

@@ -2,7 +2,7 @@
 
 ## Current Stability Level
 
-SwiftLLM is pre-`1.0` and private during incubation.
+SwiftLLM is pre-`1.0`. The package is public-release ready, but source stability is still intentionally conservative until real adopters exercise the APIs.
 
 The package should still behave like a serious public package now: source-breaking changes are allowed, but they must be intentional, documented, and covered by tests where behavior changes.
 
@@ -45,10 +45,14 @@ These are useful but should remain easy to revise:
 
 - Foundation Models generation wrappers
 - Foundation Models native tool wrappers
+- Foundation Models runtime readiness models for PCC, quota, reasoning, and dynamic context hints
 - provider-neutral client request/response types
 - OpenAI and Anthropic adapters
+- endpoint registry and routing plans
 - provider capabilities and router fallback policy
 - router and high-level LLM pipeline
+- redacted run receipts
+- context compiler
 - structured generation pipeline
 - workflow orchestration primitives (`LLMWorkflow`, `LLMStep`, `LLMWorkflowResult`, and workflow diagnostics)
 - transcript chunking

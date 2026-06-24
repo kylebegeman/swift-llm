@@ -169,21 +169,23 @@ typed timestamp evidence helpers, richer repair-loop policies, and DocC examples
 
 ## Phase 6.75: WWDC26 Readiness And Production Polish
 
-Status: planned.
+Status: substantially implemented for pre-SDK readiness.
 
 Prepare SwiftLLM for the OS 27 Foundation Models generation and public package adoption without breaking the current SDK baseline:
 
-- provider-neutral endpoint descriptors for locality, dynamic context size, quota, health, cost class, usage, and routing policy
-- Private Cloud Compute readiness through provider-neutral quota, reasoning, and cloud locality types
-- context compiler v2 with inclusion modes, context snapshots, compaction previews, omitted-source reasons, and cache-aware diagnostics
-- run receipts for generation, retrieval, context compilation, validation, repair, fallback, quota, timing, and redaction
+- provider-neutral endpoint descriptors for locality and routing policy: implemented through `LLMEndpointRegistry`, `LLMEndpoint`, and `LLMRoutingPlan`
+- Private Cloud Compute readiness through provider-neutral quota, reasoning, and cloud locality types: implemented in `SwiftLLMFoundationModels`
+- context compiler v2 with fixed-cost accounting, retrieved-context packing, dropped snippets, citations, budget reports, and compiled prompts: implemented through `LLMContextCompiler`
+- run receipts for generation routing, fallback, unsupported capability skips, timing, redaction, and token usage: implemented through `LLMRunReceipt`
+- token usage expansion for cached input tokens and reasoning tokens: implemented
+- file organization pass for large source and test files: completed for core workflow, structured generation, Foundation Models, provider tests, and broad core tests
+- docs and README examples that distinguish shipping APIs from planned SDK-gated work: updated
+- context snapshots, compaction previews, omitted-source reasons, and cache-aware diagnostics
 - stream event expansion for metadata and usage deltas
-- token usage expansion for cached input tokens and reasoning tokens
 - tool calling mode and transcript error policy types
 - Foundation Models OS 27 adapter work after the local SDK is installed
 - Evaluations framework alignment while keeping `SwiftLLMEvaluation` useful without Xcode 27
-- file organization pass for large source and test files
-- DocC and README examples that distinguish shipping APIs from planned SDK-gated work
+- DocC examples
 
 Acceptance criteria:
 

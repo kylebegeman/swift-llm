@@ -40,6 +40,13 @@
       "keywords": ["providers", "OpenAI", "Anthropic", "LLMClient", "router"]
     },
     {
+      "id": "release-notes-0-1-0",
+      "path": "docs/15-0.1.0-release-notes.md",
+      "kind": "release-notes",
+      "summary": "First public release notes, limitations, and validation summary.",
+      "keywords": ["release", "0.1.0", "validation"]
+    },
+    {
       "id": "reliability-patterns",
       "path": "llm/capabilities/reliability-patterns.md",
       "kind": "capability",

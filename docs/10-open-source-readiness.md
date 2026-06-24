@@ -2,7 +2,7 @@
 
 ## Current Status
 
-SwiftLLM is pre-`1.0` and being prepared for public release.
+SwiftLLM is pre-`1.0` and ready for a public `0.1.0` release candidate after final owner review.
 
 The repository is structured as a public Swift package:
 
@@ -23,8 +23,6 @@ The repository is structured as a public Swift package:
 
 Required:
 
-- audit docs for private Chime In details
-- audit examples for Chime In data
 - confirm the Apache-2.0 copyright holder text is correct
 - confirm the GitHub Security Advisory path works after the repository is public
 - harden CI against the final supported Xcode matrix
@@ -43,12 +41,15 @@ Completed in the first public-readiness pass:
 - update `CONTRIBUTING.md` with public contribution rules
 - add `docs/14-wwdc26-readiness.md`
 - update roadmap status for public prep
+- audit durable docs and examples for private Chime In data
+- add release-ready diagnostics, endpoint routing, context compiler, and Foundation Models pre-SDK readiness docs
 
 Still recommended:
 
 - expand release validation beyond the current local script
 - add a short public architecture graphic or generated social preview if desired
 - add a showcase screenshot after the app has meaningful UI
+- run clean package resolution from a separate sample app after the GitHub remote is public
 
 ## API Stability
 
