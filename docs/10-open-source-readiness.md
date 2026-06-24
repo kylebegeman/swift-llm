@@ -2,36 +2,53 @@
 
 ## Current Status
 
-SwiftLLM is private during incubation.
+SwiftLLM is pre-`1.0` and being prepared for public release.
 
-The repository is being structured as if it will become public later:
+The repository is structured as a public Swift package:
 
 - clear package targets
 - durable docs
 - agent docs
 - contribution guide
-- security placeholder
-- license placeholder
+- security policy
+- Apache-2.0 license
 - changelog
 - CI validation workflow
 - issue and pull request templates
 - ignored generated Xcode projects
 - example app generated from XcodeGen
+- public-facing README
 
 ## Before Publishing
 
 Required:
 
-- choose and install the final open-source license
-- replace `SECURITY.md` reporting placeholder
-- audit docs for private references
+- audit docs for private Chime In details
 - audit examples for Chime In data
+- confirm the Apache-2.0 copyright holder text is correct
+- confirm the GitHub Security Advisory path works after the repository is public
 - harden CI against the final supported Xcode matrix
-- expand release validation beyond the current local script
 - expand DocC/API reference coverage
-- add screenshots or a small demo video
-- define semantic versioning policy
+- add screenshots, diagrams, or a small demo video
+- define final semantic versioning policy for `0.x`
 - mark unstable APIs clearly
+- run clean package resolution from a separate sample app
+- tag `0.1.0`
+
+Completed in the first public-readiness pass:
+
+- choose and install Apache-2.0
+- replace `SECURITY.md` reporting placeholder
+- expand `README.md` with badges, diagrams, examples, provider boundaries, and WWDC26 readiness
+- update `CONTRIBUTING.md` with public contribution rules
+- add `docs/14-wwdc26-readiness.md`
+- update roadmap status for public prep
+
+Still recommended:
+
+- expand release validation beyond the current local script
+- add a short public architecture graphic or generated social preview if desired
+- add a showcase screenshot after the app has meaningful UI
 
 ## API Stability
 
@@ -69,6 +86,8 @@ Avoid implying:
 - it guarantees hallucination-free output
 - it replaces evaluation
 - it makes offline models equivalent to frontier cloud systems
+- Private Cloud Compute has unlimited usage
+- privacy guarantees apply equally to every provider adapter
 
 ## Community Contribution
 
@@ -83,3 +102,9 @@ The highest-value areas are:
 - safety/fallback diagnostics
 
 These are the parts most examples skip and most production apps need.
+
+## License Rationale
+
+Apache-2.0 is the recommended first public license because SwiftLLM is infrastructure-adjacent library code. The explicit patent grant and contribution terms are useful for app teams and companies evaluating adoption.
+
+MIT would also be reasonable if maximum familiarity is more important than the patent grant. If the license changes before `0.1.0`, update `README.md`, `LICENSE.md`, package metadata, and release notes together.

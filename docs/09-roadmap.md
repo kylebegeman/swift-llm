@@ -167,19 +167,51 @@ Acceptance criteria:
 Remaining refinements can happen after Chime In integration: better dynamic fallback closures,
 typed timestamp evidence helpers, richer repair-loop policies, and DocC examples.
 
+## Phase 6.75: WWDC26 Readiness And Production Polish
+
+Status: planned.
+
+Prepare SwiftLLM for the OS 27 Foundation Models generation and public package adoption without breaking the current SDK baseline:
+
+- provider-neutral endpoint descriptors for locality, dynamic context size, quota, health, cost class, usage, and routing policy
+- Private Cloud Compute readiness through provider-neutral quota, reasoning, and cloud locality types
+- context compiler v2 with inclusion modes, context snapshots, compaction previews, omitted-source reasons, and cache-aware diagnostics
+- run receipts for generation, retrieval, context compilation, validation, repair, fallback, quota, timing, and redaction
+- stream event expansion for metadata and usage deltas
+- token usage expansion for cached input tokens and reasoning tokens
+- tool calling mode and transcript error policy types
+- Foundation Models OS 27 adapter work after the local SDK is installed
+- Evaluations framework alignment while keeping `SwiftLLMEvaluation` useful without Xcode 27
+- file organization pass for large source and test files
+- DocC and README examples that distinguish shipping APIs from planned SDK-gated work
+
+Acceptance criteria:
+
+- SwiftLLM can describe on-device, PCC, external cloud, and local custom-model endpoints without app-specific concepts.
+- Context decisions are inspectable through snapshots and receipts.
+- The package remains buildable with the supported SDK until OS 27 symbols are guarded.
+- Apps can make local-first vs cloud-allowed routing decisions with explicit policy.
+
+Reference:
+
+- [WWDC26 Readiness](14-wwdc26-readiness.md)
+
 ## Phase 7: Open Source Preparation
+
+Status: in progress.
 
 Before public release:
 
-- choose license
-- audit docs for private Chime In details
-- finalize API stability policy
-- expand DocC documentation
-- harden CI across supported Xcode versions
-- finalize contribution guide details
-- add security reporting contact
-- add sample screenshots
-- tag `0.1.0`
+- choose license: completed with Apache-2.0
+- replace security placeholder: completed
+- expand README: completed for the first public-facing pass
+- finalize contribution guide details: completed for the first public-facing pass
+- audit docs for private Chime In details: in progress
+- finalize API stability policy: in progress
+- expand DocC documentation: in progress
+- harden CI across supported Xcode versions: pending
+- add sample screenshots or terminal/demo visuals: pending
+- tag `0.1.0`: pending
 
 ## Later: Custom Adapters
 
@@ -193,5 +225,7 @@ A future adapter manager could handle:
 - download/asset status
 - base model version compatibility
 - fallback to base model
+- Foundation Models `LanguageModel` provider-package bridging
+- Core AI or MLX-backed local language model descriptors
 
 This should wait until the core orchestration layer is useful.

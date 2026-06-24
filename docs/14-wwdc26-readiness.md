@@ -1,0 +1,154 @@
+# WWDC26 Readiness
+
+SwiftLLM should stay source-compatible with the currently supported SDK while preparing its abstractions for the Foundation Models changes Apple introduced at WWDC26.
+
+This document records the durable conclusions from the WWDC26 transcript pass and official Apple source review. It is planning guidance, not a claim that iOS 27 SDK code is implemented today.
+
+## Source Material
+
+Official Apple pages:
+
+- [Apple Intelligence What's New](https://developer.apple.com/apple-intelligence/whats-new/)
+- [Foundation Models documentation](https://developer.apple.com/documentation/foundationmodels)
+- [Private Cloud Compute](https://developer.apple.com/private-cloud-compute/)
+- [What's new in the Foundation Models framework](https://developer.apple.com/videos/play/wwdc2026/241/)
+- [Build with the new Apple Foundation Model on Private Cloud Compute](https://developer.apple.com/videos/play/wwdc2026/319/)
+- [Build agentic app experiences with the Foundation Models framework](https://developer.apple.com/videos/play/wwdc2026/242/)
+- [Bring an LLM provider to the Foundation Models framework](https://developer.apple.com/videos/play/wwdc2026/339/)
+- [Build AI-powered scripts with the fm CLI and Python SDK](https://developer.apple.com/videos/play/wwdc2026/334/)
+
+Local transcript bundle reviewed:
+
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-240.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-241.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-242.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-297.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-319.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-324.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-325.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-334.txt`
+- `/Users/kyle/Downloads/wwdc-foundation/wwdc2026-339.txt`
+
+## Major Platform Changes
+
+### Foundation Models As A Model Abstraction
+
+Foundation Models is expanding from an Apple on-device model API into a common Swift session API for multiple language models. The new `LanguageModel` protocol and `LanguageModelExecutor` shape allow Apple on-device models, Private Cloud Compute, Core AI, MLX, third-party cloud providers, and community packages to back `LanguageModelSession`.
+
+SwiftLLM implication:
+
+- Keep `LLMClient` provider-neutral.
+- Add richer endpoint descriptors that can represent locality, context size, quota, cost, health, usage, and routing policy.
+- Keep Foundation Models imports isolated to `SwiftLLMFoundationModels`.
+
+### Private Cloud Compute
+
+`PrivateCloudComputeLanguageModel` gives eligible apps access to a larger Apple Foundation Model through Private Cloud Compute. It uses the same Foundation Models session style, supports a 32K context window, supports reasoning, requires Apple Intelligence availability, and has per-user daily usage limits.
+
+SwiftLLM implication:
+
+- Add provider-neutral types for private cloud locality, quota status, reasoning effort, and dynamic context size before importing iOS 27 symbols.
+- Make routing able to prefer on-device execution for offline or low-latency tasks and PCC for larger-context or higher-reasoning tasks.
+- Treat PCC as networked execution in policy and diagnostics, even though Apple provides strong privacy guarantees and OS-managed authentication.
+
+### Reasoning And Token Accounting
+
+PCC reasoning appears as extra generated transcript content before the final answer. It can improve quality, but it consumes context tokens and can increase latency. WWDC26 also highlights usage properties for token accounting, including cached input tokens and reasoning tokens.
+
+SwiftLLM implication:
+
+- Extend token usage and budget reports to represent reasoning tokens and cached input tokens.
+- Treat reasoning as an observable transcript or stream event where the provider supports it.
+- Reserve budget for reasoning when routing to reasoning-capable models.
+
+### Dynamic Profiles And Transcript Management
+
+Dynamic Profiles allow a session to change model, tools, instructions, generation options, and transcript treatment before each prompt. The transcript guidance is especially relevant:
+
+- `historyTransform` is a lossless per-request transform.
+- Mutating session history is lossy and affects all profiles.
+- Appending transcript entries best preserves key-value cache behavior.
+- Rewriting history, changing instructions, or changing tools can invalidate caches.
+- Tool calling mode can be allowed, disallowed, or required.
+- Required tool calling needs an exit condition.
+- Transcript error handling can revert or preserve partial state.
+
+SwiftLLM implication:
+
+- Add a context compiler that distinguishes lossless request transforms from persisted lossy compaction.
+- Add context snapshots and compaction previews.
+- Add cache-aware diagnostics when context is rewritten.
+- Add provider-neutral tool calling mode and transcript error policy types.
+
+### Provider Packages
+
+The provider session explains that `LanguageModelExecutor` should handle prewarming, request translation, streaming events, metadata, usage, transcript comparison, cache invalidation, and provider-specific errors. It also highlights custom segments and response metadata for citations, new modalities, server-side tools, and performance metrics.
+
+SwiftLLM implication:
+
+- Expand stream events to support metadata and usage deltas before completion.
+- Prefer built-in error taxonomies where possible and keep provider-specific errors typed.
+- Represent server-side tools as provider capabilities and response metadata, not hidden app-local side effects.
+- Keep authentication and credential persistence out of the package unless a future provider bridge has an explicit design.
+
+### Core AI, MLX, And Custom Local Models
+
+Core AI and MLX create a path for local custom language models that can plug into Foundation Models. Core AI also introduces model specialization, model cache behavior, key-value cache state, ahead-of-time compilation, and local debugging tools.
+
+SwiftLLM implication:
+
+- Do not add a Core AI dependency to the core package now.
+- Make endpoint descriptors capable of representing local bundled and downloaded models.
+- Consider future fields for prewarm cost, specialization status, asset size, and cache readiness.
+
+### Evaluations, fm, And Python
+
+The Evaluations framework, `fm` CLI, and Foundation Models Python SDK create a better prompt iteration loop:
+
+- Prototype prompts with `fm chat` or `fm respond`.
+- Use schemas and images from the command line when useful.
+- Use Python notebooks and data tooling for dataset generation, grading, and charts.
+- Bring stable prompt versions back into Swift as `PromptContract` values.
+- Track prompt regressions with `SwiftLLMEvaluation`.
+
+SwiftLLM implication:
+
+- Keep `SwiftLLMEvaluation` independent of Xcode 27, but design report shapes that can align with Apple's Evaluations framework later.
+- Add import/export helpers only when real datasets prove the need.
+
+### App Intents, Visual Intelligence, And Spotlight
+
+App Intents, Visual Intelligence, Spotlight, view annotations, and system store integrations are app-layer features. They should not become core SwiftLLM dependencies.
+
+SwiftLLM implication:
+
+- Provide context, retrieval, citation, validation, and evaluation primitives that apps can use behind App Intents and Visual Intelligence flows.
+- Avoid owning Siri schemas, view annotations, or Visual Intelligence provider UX.
+- Consider docs for using SwiftLLM behind App Intents and Core Spotlight RAG.
+
+## Planned SwiftLLM Work
+
+Pre-SDK work:
+
+- Add provider-neutral locality, quota, reasoning, endpoint health, and dynamic context-size models.
+- Add richer context snapshots, compaction previews, and cache-aware diagnostics.
+- Add run receipts that record routing, context, retrieval, validation, fallback, quota, redaction, and timing.
+- Update docs to avoid treating 4,096 tokens as the only Foundation Models context window.
+- Keep all examples compiling on the current SDK.
+
+Post-SDK work:
+
+- Add `PrivateCloudComputeLanguageModel` support behind availability checks.
+- Query `contextSize` dynamically.
+- Map Apple quota usage into SwiftLLM quota status.
+- Map reasoning levels where supported.
+- Add showcase examples for on-device, PCC, and fallback routing.
+- Explore Foundation Models provider bridge support only after the local SDK and open-source package details are stable.
+
+## Non-Goals
+
+- Do not turn SwiftLLM into an App Intents framework.
+- Do not add a Core AI dependency to `SwiftLLM`.
+- Do not make external providers implicit.
+- Do not persist API keys, raw prompts, raw transcripts, or provider payloads by default.
+- Do not promise unlimited PCC usage. Quota handling is required.

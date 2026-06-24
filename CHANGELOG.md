@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Replaced the license placeholder with Apache-2.0.
+- Replaced the security placeholder with a public vulnerability reporting policy and LLM-specific security scope.
+- Reworked the README with badges, diagrams, quick-start examples, provider boundaries, evaluation guidance, and WWDC26 readiness notes.
+- Updated contributing guidance for public package boundaries, Swift concurrency expectations, verification, and OS 27 SDK gating.
+- Added durable WWDC26 readiness documentation covering Private Cloud Compute, reasoning, Dynamic Profiles, provider packages, Core AI, MLX, Evaluations, fm, and Python SDK implications.
+- Updated the Foundation Models reference, roadmap, and open-source readiness docs for OS 27 planning and public-release polish.
+
 ## 0.1.0-rc.2
 
 - Split the OpenAI and Anthropic adapters into transport, request encoding, response decoding, streaming, and support files without changing their public client APIs.
