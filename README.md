@@ -55,7 +55,7 @@ flowchart LR
 - Xcode with the matching Apple platform SDKs
 - XcodeGen only for the optional showcase app
 
-The package is prepared to model OS 27 Foundation Models concepts, including Private Cloud Compute, dynamic context size, reasoning, Dynamic Profiles, provider packages, and Evaluations. watchOS support will require adding a package platform target. Code that imports unavailable OS 27 symbols will be added only after the local SDK is installed and guarded with availability checks.
+The package now includes provider-neutral models for OS 27 Foundation Models concepts, including Private Cloud Compute execution targets, dynamic context-size hints, reasoning effort, quota status, endpoint routing, and run receipts. Dynamic Profiles, provider packages, and Evaluations remain represented at the abstraction level until the local OS 27 SDK is installed. Code that imports unavailable OS 27 symbols will be added only behind availability checks.
 
 ## Installation
 

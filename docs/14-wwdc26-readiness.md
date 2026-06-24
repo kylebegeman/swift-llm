@@ -128,12 +128,20 @@ SwiftLLM implication:
 
 ## Planned SwiftLLM Work
 
-Pre-SDK work:
+Pre-SDK work now implemented:
 
-- Add provider-neutral locality, quota, reasoning, endpoint health, and dynamic context-size models.
-- Add richer context snapshots, compaction previews, and cache-aware diagnostics.
-- Add run receipts that record routing, context, retrieval, validation, fallback, quota, redaction, and timing.
-- Update docs to avoid treating 4,096 tokens as the only Foundation Models context window.
+- Provider-neutral execution target, quota, reasoning, runtime profile, and dynamic context-size models.
+- Endpoint registry and routing plans for local, PCC-ready, provider package, and external fallback ladders.
+- Redacted run receipts that record routing attempts, unsupported capability skips, fallback reasons, token usage, duration, and provider metadata.
+- Token usage fields for cached input tokens and reasoning tokens.
+- Context compiler support for fixed-cost accounting, dropped-snippet diagnostics, and Foundation Models context hints.
+- Docs no longer treat 4,096 tokens as the only Foundation Models context window.
+
+Pre-SDK work still planned:
+
+- Richer context snapshots, compaction previews, and cache-aware diagnostics.
+- Stream events for metadata and usage deltas before completion.
+- Tool calling mode and transcript error policy types.
 - Keep all examples compiling on the current SDK.
 
 Post-SDK work:

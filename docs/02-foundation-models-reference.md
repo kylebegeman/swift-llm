@@ -104,6 +104,13 @@ Private Cloud Compute gives eligible apps access to a larger Apple Foundation Mo
 
 SwiftLLM should represent PCC as a distinct model locality. It can be privacy-preserving and OS-managed while still being cloud execution. Apps should be able to express policies such as local-only, local-preferred, PCC-allowed, or external-cloud-allowed.
 
+`SwiftLLMFoundationModels` now includes pre-SDK readiness types for this layer:
+
+- `FoundationModelExecutionTarget` distinguishes automatic, on-device, Private Cloud Compute, provider package, and custom local execution.
+- `FoundationModelRuntimeProfile` records context window size, dynamic-context support, reasoning support, reasoning effort, and quota status.
+- `FoundationModelQuotaStatus` models quota availability without assuming a particular Apple SDK property name.
+- `FoundationModelGenerationOptions` carries requested execution target, reasoning effort, and requested context-window size. The live adapter ignores fields that cannot be mapped until the OS 27 SDK is available.
+
 ## Reasoning
 
 PCC reasoning lets the model spend additional generated text before producing the final answer. The reasoning segment can improve quality, but it consumes context tokens and may increase latency. Deep reasoning can use more tokens than the final answer.
@@ -116,6 +123,8 @@ SwiftLLM should model reasoning as:
 - an observable transcript or stream event where the provider exposes it
 
 Reasoning should not be treated as a free quality upgrade.
+
+`LLMTokenUsage`, `LLMTokenUsageReceipt`, and `EvaluationRunMetrics` include optional `cachedInputTokens` and `reasoningTokens` fields so PCC and provider-package usage reports can map into SwiftLLM without changing the public metrics shape later.
 
 ## Guided Generation
 

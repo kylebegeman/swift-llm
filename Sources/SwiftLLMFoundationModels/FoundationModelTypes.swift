@@ -4,14 +4,17 @@ import SwiftLLM
 public enum FoundationModelDefaults {
   public static let contextWindowTokens = 4_096
   public static let defaultPromptVersion = "foundation-models-v1"
+  public static let onDeviceContextWindowTokens = 4_096
+  public static let privateCloudContextWindowTokens = 32_768
 
   public static func metadata(
     promptVersion: String = Self.defaultPromptVersion,
-    modelIdentifier: String = "SystemLanguageModel.default"
+    modelIdentifier: String = "SystemLanguageModel.default",
+    executionTarget: FoundationModelExecutionTarget = .onDevice
   ) -> LLMProviderMetadata {
     LLMProviderMetadata(
       modelIdentifier: modelIdentifier,
-      privacyMode: .localOnly,
+      privacyMode: executionTarget.privacyMode,
       promptVersion: promptVersion,
       providerDisplayName: "Apple Foundation Models",
       providerKind: .appleFoundationModels
@@ -87,8 +90,11 @@ public enum FoundationModelSamplingMode: Equatable, Sendable {
 }
 
 public struct FoundationModelGenerationOptions: Equatable, Sendable {
+  public var executionTarget: FoundationModelExecutionTarget
   public var includeSchemaInPrompt: Bool
   public var maximumResponseTokens: Int?
+  public var requestedContextWindowTokens: Int?
+  public var reasoningEffort: FoundationModelReasoningEffort
   public var sampling: FoundationModelSamplingMode
   public var temperature: Double?
 
@@ -96,10 +102,16 @@ public struct FoundationModelGenerationOptions: Equatable, Sendable {
     sampling: FoundationModelSamplingMode = .greedy,
     temperature: Double? = 0.1,
     maximumResponseTokens: Int? = nil,
-    includeSchemaInPrompt: Bool = true
+    includeSchemaInPrompt: Bool = true,
+    executionTarget: FoundationModelExecutionTarget = .automatic,
+    reasoningEffort: FoundationModelReasoningEffort = .systemDefault,
+    requestedContextWindowTokens: Int? = nil
   ) {
+    self.executionTarget = executionTarget
     self.includeSchemaInPrompt = includeSchemaInPrompt
     self.maximumResponseTokens = maximumResponseTokens
+    self.requestedContextWindowTokens = requestedContextWindowTokens ?? executionTarget.defaultContextWindowTokens
+    self.reasoningEffort = reasoningEffort
     self.sampling = sampling
     self.temperature = temperature
   }
@@ -108,7 +120,9 @@ public struct FoundationModelGenerationOptions: Equatable, Sendable {
     sampling: .greedy,
     temperature: 0.1,
     maximumResponseTokens: nil,
-    includeSchemaInPrompt: true
+    includeSchemaInPrompt: true,
+    executionTarget: .automatic,
+    reasoningEffort: .systemDefault
   )
 }
 
@@ -145,17 +159,20 @@ public struct FoundationModelGenerationRequest: Equatable, Sendable {
   public var options: FoundationModelGenerationOptions
   public var prompt: CompiledPrompt
   public var prewarmPromptPrefix: String?
+  public var runtimeProfile: FoundationModelRuntimeProfile?
   public var useCase: FoundationModelUseCase
 
   public init(
     prompt: CompiledPrompt,
     options: FoundationModelGenerationOptions = .deterministic,
     useCase: FoundationModelUseCase = .general,
-    prewarmPromptPrefix: String? = nil
+    prewarmPromptPrefix: String? = nil,
+    runtimeProfile: FoundationModelRuntimeProfile? = nil
   ) {
     self.options = options
     self.prompt = prompt
     self.prewarmPromptPrefix = prewarmPromptPrefix ?? prompt.contextPlan?.prewarmPromptPrefix
+    self.runtimeProfile = runtimeProfile
     self.useCase = useCase
   }
 }

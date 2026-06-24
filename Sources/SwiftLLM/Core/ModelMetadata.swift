@@ -74,21 +74,27 @@ public enum LLMRunStatus: String, Equatable, Sendable {
 }
 
 public struct LLMTokenUsage: Equatable, Sendable {
+  public var cachedInputTokens: Int?
   public var estimatedInputTokens: Int
   public var estimatedOutputTokens: Int
   public var measuredInputTokens: Int?
   public var measuredOutputTokens: Int?
+  public var reasoningTokens: Int?
 
   public init(
     estimatedInputTokens: Int,
     estimatedOutputTokens: Int,
     measuredInputTokens: Int? = nil,
-    measuredOutputTokens: Int? = nil
+    measuredOutputTokens: Int? = nil,
+    cachedInputTokens: Int? = nil,
+    reasoningTokens: Int? = nil
   ) {
+    self.cachedInputTokens = cachedInputTokens
     self.estimatedInputTokens = estimatedInputTokens
     self.estimatedOutputTokens = estimatedOutputTokens
     self.measuredInputTokens = measuredInputTokens
     self.measuredOutputTokens = measuredOutputTokens
+    self.reasoningTokens = reasoningTokens
   }
 }
 

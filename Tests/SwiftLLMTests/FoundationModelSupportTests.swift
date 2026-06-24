@@ -156,4 +156,47 @@ struct FoundationModelSupportTests {
     #expect(count == TokenCounter.latinHeuristic.count("A short local prompt"))
     #expect(FoundationModelClient.unavailable.availability() == .unavailableInBuild)
   }
+
+  @Test
+  func privateCloudRuntimeProfileCapturesContextReasoningAndQuotaReadiness() {
+    let profile = FoundationModelRuntimeProfile.privateCloudCompute
+    let options = FoundationModelGenerationOptions(
+      maximumResponseTokens: 512,
+      executionTarget: .privateCloudCompute,
+      reasoningEffort: .high
+    )
+    let metadata = FoundationModelDefaults.metadata(
+      promptVersion: "cloud-v1",
+      modelIdentifier: "PrivateCloudComputeLanguageModel",
+      executionTarget: .privateCloudCompute
+    )
+
+    #expect(profile.executionTarget == .privateCloudCompute)
+    #expect(profile.contextWindowTokens == 32_768)
+    #expect(profile.supportsReasoning)
+    #expect(profile.supportsDynamicContext)
+    #expect(profile.quotaStatus.permitsGeneration)
+    #expect(options.requestedContextWindowTokens == 32_768)
+    #expect(options.reasoningEffort == .high)
+    #expect(metadata.privacyMode == .localWithUserSelectedContext)
+  }
+
+  @Test
+  func tokenUsageCarriesCachedInputAndReasoningTokens() {
+    let usage = LLMTokenUsage(
+      estimatedInputTokens: 100,
+      estimatedOutputTokens: 40,
+      measuredInputTokens: 92,
+      measuredOutputTokens: 34,
+      cachedInputTokens: 18,
+      reasoningTokens: 12
+    )
+    let receipt = LLMTokenUsageReceipt(usage: usage)
+    let metrics = EvaluationRunMetrics(tokenUsage: usage)
+
+    #expect(receipt.cachedInputTokens == 18)
+    #expect(receipt.reasoningTokens == 12)
+    #expect(metrics.cachedInputTokens == 18)
+    #expect(metrics.reasoningTokens == 12)
+  }
 }

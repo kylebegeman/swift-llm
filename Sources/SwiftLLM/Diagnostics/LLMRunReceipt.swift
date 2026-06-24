@@ -87,21 +87,27 @@ public struct LLMProviderReceiptSnapshot: Codable, Equatable, Sendable {
 }
 
 public struct LLMTokenUsageReceipt: Codable, Equatable, Sendable {
+  public var cachedInputTokens: Int?
   public var estimatedInputTokens: Int
   public var estimatedOutputTokens: Int
   public var measuredInputTokens: Int?
   public var measuredOutputTokens: Int?
+  public var reasoningTokens: Int?
 
   public init(
     estimatedInputTokens: Int,
     estimatedOutputTokens: Int,
     measuredInputTokens: Int? = nil,
-    measuredOutputTokens: Int? = nil
+    measuredOutputTokens: Int? = nil,
+    cachedInputTokens: Int? = nil,
+    reasoningTokens: Int? = nil
   ) {
+    self.cachedInputTokens = cachedInputTokens
     self.estimatedInputTokens = estimatedInputTokens
     self.estimatedOutputTokens = estimatedOutputTokens
     self.measuredInputTokens = measuredInputTokens
     self.measuredOutputTokens = measuredOutputTokens
+    self.reasoningTokens = reasoningTokens
   }
 
   public init(usage: LLMTokenUsage) {
@@ -109,7 +115,9 @@ public struct LLMTokenUsageReceipt: Codable, Equatable, Sendable {
       estimatedInputTokens: usage.estimatedInputTokens,
       estimatedOutputTokens: usage.estimatedOutputTokens,
       measuredInputTokens: usage.measuredInputTokens,
-      measuredOutputTokens: usage.measuredOutputTokens
+      measuredOutputTokens: usage.measuredOutputTokens,
+      cachedInputTokens: usage.cachedInputTokens,
+      reasoningTokens: usage.reasoningTokens
     )
   }
 }

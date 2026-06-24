@@ -23,6 +23,10 @@ Use this card for availability, locale support, guided generation, tool calling,
 - `FoundationModelGenerationOptions`
 - `FoundationModelGenerationRequest`
 - `FoundationModelGenerationResponse`
+- `FoundationModelExecutionTarget`
+- `FoundationModelRuntimeProfile`
+- `FoundationModelQuotaStatus`
+- `FoundationModelReasoningEffort`
 - `FoundationModelToolConfiguration` when `FoundationModels` is importable
 - `FoundationModelFailure`
 - `FoundationModelErrorNormalizer`
@@ -31,12 +35,14 @@ Use this card for availability, locale support, guided generation, tool calling,
 
 It is now the typed adapter layer for availability, token counting, prewarming, text generation,
 guided generation and native tool calls where `FoundationModels` is importable, context-plan
-budgeting, error normalization, and response metadata. Richer feedback capture is still future work.
+budgeting, error normalization, response metadata, and pre-SDK readiness models for Private Cloud
+Compute, provider packages, reasoning, quota, and dynamic context size. Richer stream feedback
+capture is still future work.
 
 ## Source Of Truth
 
 - Durable package docs: `../../docs/02-foundation-models-reference.md`
-- Current code: `Sources/SwiftLLMFoundationModels/FoundationModelSupport.swift`
+- Current code: `Sources/SwiftLLMFoundationModels/`
 
 ## Common Failure Modes
 
