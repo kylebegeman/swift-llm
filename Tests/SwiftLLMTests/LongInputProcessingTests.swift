@@ -105,6 +105,25 @@ struct LongInputProcessingTests {
   }
 
   @Test
+  func parallelMapReducePipelinePreservesInputOrder() async throws {
+    let pipeline = MapReducePipeline<Int, String, String>(
+      maximumConcurrentTasks: 3,
+      map: { value in
+        try await Task.sleep(for: .milliseconds((4 - value) * 10))
+        return ChunkProcessingResult(chunk: value, output: "\(value)")
+      },
+      reduce: { partials in
+        partials.map(\.output).joined(separator: ",")
+      }
+    )
+
+    let result = try await pipeline.run(chunks: [1, 2, 3])
+
+    #expect(result.partials.map(\.chunk) == [1, 2, 3])
+    #expect(result.output == "1,2,3")
+  }
+
+  @Test
   func mapReducePipelinePropagatesCancellation() async {
     let pipeline = MapReducePipeline<Int, Int, Int>(
       map: { value in
