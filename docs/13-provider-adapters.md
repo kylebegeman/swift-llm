@@ -142,6 +142,33 @@ Existing `respond(to:)` call sites can emit the same receipts through
 provider metadata, not prompt text, context text, tool arguments, or response
 text.
 
+## Endpoint Registry
+
+`LLMEndpointRegistry` lets apps register already-created clients under stable
+IDs and then build routers from a routing plan:
+
+```swift
+let registry = LLMEndpointRegistry(
+  endpoints: [
+    LLMEndpoint(id: "local", client: AnyLLMClient(FoundationModelClient.live), priority: 10),
+    LLMEndpoint(id: "openai", client: openAI, priority: 20),
+    LLMEndpoint(id: "anthropic", client: anthropic, priority: 30),
+  ]
+)
+
+let client = try registry.router()
+```
+
+Lower priority values run first. Disabled endpoints are ignored by priority
+routing and rejected when requested explicitly. `LLMRoutingPlan` can pin a
+primary endpoint, choose explicit fallback IDs, disable automatic fallbacks, or
+attach the same run-receipt handler that `LLMRouter` accepts.
+
+The registry intentionally stores `AnyLLMClient` values, endpoint IDs, priority,
+enabled state, and tags. It does not serialize API keys, provider secrets, or
+transport configuration. Apps should keep credential storage in Keychain,
+environment configuration, or their own settings layer.
+
 ## Prompt/RAG Pipeline
 
 `LLMPipeline` combines:

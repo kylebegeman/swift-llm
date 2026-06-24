@@ -135,6 +135,10 @@ let response = try await client.respond(
 
 API keys are provided by your app at runtime. SwiftLLM does not define a key storage policy and does not persist credentials.
 
+For larger apps, register already-created clients with `LLMEndpointRegistry` and
+build routers from endpoint IDs, priorities, enabled state, and routing plans.
+The registry stores client handles and routing metadata, not provider secrets.
+
 ## Prompt Contracts
 
 Prompt contracts make prompt changes reviewable:
