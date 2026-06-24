@@ -2,7 +2,7 @@
 
 ## Phase 0: Private Scaffold
 
-Status: started.
+Status: completed.
 
 - Create package targets.
 - Add XcodeGen showcase shell.
@@ -64,6 +64,7 @@ Improve long-input handling:
 - transcript-segment chunker: implemented through `TranscriptSegment`, `TranscriptChunk`, and `TranscriptChunker`
 - overlap policies: implemented for text units and transcript segments
 - map/reduce orchestration: implemented through `MapReducePipeline`
+- bounded concurrent map execution: implemented with input-order preservation
 - merge and dedupe helpers: implemented through `MergePolicy`
 - context packing strategies: implemented through `.scoreDescending` and `.scoreDensity`
 
@@ -72,7 +73,7 @@ Acceptance criteria:
 - Long Chime In recordings can be processed without prefix/suffix truncation.
 - Intermediate chunk outputs preserve source evidence.
 
-Remaining refinements can happen in later phases: concurrent map execution with resource controls, richer transcript timestamp evidence helpers, chunk diagnostics, domain-specific merge policies, and automatic repair loops over failed chunks.
+Remaining refinements can happen in later phases: richer transcript timestamp evidence helpers, chunk diagnostics, domain-specific merge policies, and automatic repair loops over failed chunks.
 
 ## Phase 4: Local RAG
 
@@ -118,7 +119,7 @@ Remaining refinements can happen in later phases: first-class safety probe model
 
 ## Phase 6: Provider-Neutral Client Layer
 
-Status: completed for the first private adapter slice.
+Status: completed for the first public adapter slice.
 
 Add Swift-native provider access that can support local Foundation Models plus explicitly configured external providers:
 
@@ -169,7 +170,7 @@ typed timestamp evidence helpers, richer repair-loop policies, and DocC examples
 
 ## Phase 6.75: WWDC26 Readiness And Production Polish
 
-Status: substantially implemented for pre-SDK readiness.
+Status: completed for pre-SDK readiness.
 
 Prepare SwiftLLM for the OS 27 Foundation Models generation and public package adoption without breaking the current SDK baseline:
 
@@ -178,7 +179,7 @@ Prepare SwiftLLM for the OS 27 Foundation Models generation and public package a
 - context compiler v2 with fixed-cost accounting, retrieved-context packing, dropped snippets, citations, budget reports, and compiled prompts: implemented through `LLMContextCompiler`
 - run receipts for generation routing, fallback, unsupported capability skips, timing, redaction, and token usage: implemented through `LLMRunReceipt`
 - token usage expansion for cached input tokens and reasoning tokens: implemented
-- file organization pass for large source and test files: completed for core workflow, structured generation, Foundation Models, provider tests, and broad core tests
+- file organization pass for large source and test files: completed for core client, router, context, retrieval, workflow, structured generation, Foundation Models, evaluation, provider tests, and broad core tests
 - docs and README examples that distinguish shipping APIs from planned SDK-gated work: updated
 - context snapshots, compaction previews, omitted-source reasons, and cache-aware diagnostics
 - stream event expansion for metadata and usage deltas
@@ -200,20 +201,24 @@ Reference:
 
 ## Phase 7: Open Source Preparation
 
-Status: in progress.
+Status: completed for local `1.0.0` release prep.
 
-Before public release:
+Completed:
 
 - choose license: completed with Apache-2.0
-- replace security placeholder: completed
+- replace initial security stub: completed with GitHub Security Advisory reporting path
 - expand README: completed for the first public-facing pass
 - finalize contribution guide details: completed for the first public-facing pass
-- audit docs for private Chime In details: in progress
-- finalize API stability policy: in progress
-- expand DocC documentation: in progress
-- harden CI across supported Xcode versions: pending
-- add sample screenshots or terminal/demo visuals: pending
-- tag `0.1.0`: pending
+- audit docs for private Chime In details: completed with synthetic examples retained where useful
+- finalize API stability policy: completed for semantic versioning from `1.0.0`
+- expand DocC documentation: completed enough for local DocC build, with examples to grow over time
+- split large source files and tests: completed for current release scope
+- prepare `1.0.0` tag: completed after final validation
+
+Post-release polish:
+
+- harden CI across additional supported Xcode versions as they become available
+- add sample screenshots or terminal/demo visuals after the showcase UI has enough surface area
 
 ## Later: Custom Adapters
 

@@ -71,7 +71,7 @@ long transcript
 
 Fresh sessions matter because the session transcript consumes context. For long work, reusing a session can create context pressure that is hard to reason about.
 
-`MapReducePipeline` now provides the provider-neutral runner for this shape. It maps chunks into `ChunkProcessingResult` values, then reduces ordered partials into a final result. The pipeline is deliberately sequential in the first version so behavior is deterministic and easy to debug; concurrent mapping can be added later with cancellation and resource controls.
+`MapReducePipeline` now provides the provider-neutral runner for this shape. It maps chunks into `ChunkProcessingResult` values, then reduces ordered partials into a final result. The default is sequential for deterministic debugging. Apps can opt into bounded parallel mapping with `maximumConcurrentTasks`, and the pipeline preserves input order before reduction even when chunks finish out of order.
 
 ## Context Packing
 
@@ -137,4 +137,4 @@ For Chime In, the long transcript strategy should be:
 
 SwiftLLM should own steps 1, 2 orchestration, 4 helpers, and 5 orchestration. Chime In should own the final review draft model and persistence.
 
-The first Phase 3 implementation now covers steps 1, 2 orchestration, and generic merge helpers. Chime In still needs domain-specific merge policies for tasks, dates, and decisions.
+The Phase 3 implementation now covers steps 1, 2 orchestration, and generic merge helpers. Chime In still needs domain-specific merge policies for tasks, dates, and decisions.

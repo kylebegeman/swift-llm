@@ -63,7 +63,7 @@ Add the package with Swift Package Manager:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/mrbagels/swift-llm.git", from: "0.1.0")
+  .package(url: "https://github.com/mrbagels/swift-llm.git", from: "1.0.0")
 ]
 ```
 
@@ -79,7 +79,7 @@ Then add only the products you need:
 )
 ```
 
-During active pre-release development, pin to the `next` branch if a `0.1.0` tag is not available yet.
+During active development, pin to the `next` branch only when you intentionally want unreleased changes.
 
 ## Quick Start
 

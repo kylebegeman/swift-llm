@@ -2,21 +2,11 @@
 
 ## Current Stability Level
 
-SwiftLLM is pre-`1.0`. The package is public-release ready, but source stability is still intentionally conservative until real adopters exercise the APIs.
+SwiftLLM follows semantic versioning from `1.0.0` onward. Public APIs are expected to remain source-compatible across patch and minor releases unless a security or platform compatibility issue leaves no practical alternative.
 
-The package should still behave like a serious public package now: source-breaking changes are allowed, but they must be intentional, documented, and covered by tests where behavior changes.
+The package is still young. New functionality should prefer additive APIs, small value types, and explicit provider boundaries so later releases can grow without forcing adopters through broad migrations.
 
 ## Versioning Policy
-
-Before public release:
-
-- use `0.x` versions
-- allow source-breaking changes between minor versions
-- document breaking changes in `CHANGELOG.md`
-- avoid breaking changes in patch versions
-- prefer additive changes when the existing shape is already plausible
-
-At `1.0`:
 
 - follow semantic versioning
 - reserve source-breaking changes for major versions
@@ -27,7 +17,7 @@ At `1.0`:
 
 ### Stable Candidates
 
-These APIs are closest to public shape:
+These APIs are treated as stable public surface in `1.0.0`:
 
 - provider metadata
 - prompt contracts
@@ -36,6 +26,7 @@ These APIs are closest to public shape:
 - grounding validation
 - fallback reasons
 - evaluation result records
+- provider-neutral request, response, message, tool, schema, and stream-event value types
 
 They are small value types and already have tests.
 
@@ -46,7 +37,6 @@ These are useful but should remain easy to revise:
 - Foundation Models generation wrappers
 - Foundation Models native tool wrappers
 - Foundation Models runtime readiness models for PCC, quota, reasoning, and dynamic context hints
-- provider-neutral client request/response types
 - OpenAI and Anthropic adapters
 - endpoint registry and routing plans
 - provider capabilities and router fallback policy
@@ -61,7 +51,7 @@ These are useful but should remain easy to revise:
 - structured output assertions
 - debug bundle format
 
-They should become stable after Chime In exercises them in real workflows.
+They are public and tested, but their convenience layers may grow through additive APIs as real apps exercise them.
 
 ### Experimental Future APIs
 
@@ -71,7 +61,6 @@ These should not be promised publicly until implemented and tested:
 - SQLite/GRDB retrieval adapters
 - embedding-backed retrieval
 - automatic repair loops
-- concurrent map/reduce execution
 - custom Foundation Models adapter management
 
 ## Naming Rules
@@ -93,7 +82,7 @@ When replacing a public API:
 4. Document migration notes in `CHANGELOG.md`.
 5. Remove the old API only at an allowed breaking-change boundary.
 
-During private incubation, a direct replacement is acceptable if the change is documented in the changelog.
+Direct replacement without deprecation should be reserved for major versions or unreleased branch-only APIs.
 
 ## Compatibility Checks
 

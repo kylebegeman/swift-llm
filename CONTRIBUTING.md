@@ -111,7 +111,7 @@ For security or privacy issues, use [SECURITY.md](SECURITY.md) instead of a publ
 
 ## Release Discipline
 
-SwiftLLM is pre-`1.0`. Source-breaking changes are allowed in minor releases, but they should be intentional and documented in [CHANGELOG.md](CHANGELOG.md).
+SwiftLLM follows semantic versioning from `1.0.0` onward. Source-breaking changes should be reserved for major versions unless a security or platform compatibility issue leaves no practical alternative.
 
 Follow:
 

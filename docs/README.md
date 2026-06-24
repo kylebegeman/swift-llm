@@ -19,7 +19,7 @@ Start here for the durable, human-oriented explanation of SwiftLLM.
 13. `12-release-process.md`
 14. `13-provider-adapters.md`
 15. `14-wwdc26-readiness.md`
-16. `15-0.1.0-release-notes.md`
+16. `15-1.0.0-release-notes.md`
 
 If you are an agent or want the cheapest route to the right files, use [`../llm/START_HERE.md`](../llm/START_HERE.md).
 
@@ -44,8 +44,8 @@ Temporary notes live in [`../scratch/`](../scratch/). Scratch files are expendab
 | `08-chime-in-incubation.md` | how Chime In should consume and pressure-test the package |
 | `09-roadmap.md` | phased implementation plan |
 | `10-open-source-readiness.md` | publication criteria, licensing, API stability, and repo hygiene |
-| `11-api-stability.md` | pre-1.0 API stability policy |
+| `11-api-stability.md` | semantic versioning and public API stability policy |
 | `12-release-process.md` | release branch and tagging process |
 | `13-provider-adapters.md` | provider-neutral client API plus Foundation Models, OpenAI, and Anthropic adapter behavior |
 | `14-wwdc26-readiness.md` | WWDC26 Foundation Models, Private Cloud Compute, Dynamic Profiles, provider packages, and Evaluations readiness |
-| `15-0.1.0-release-notes.md` | first public release notes, limitations, and validation summary |
+| `15-1.0.0-release-notes.md` | 1.0.0 release notes, limitations, and validation summary |
