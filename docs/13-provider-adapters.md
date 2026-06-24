@@ -127,6 +127,21 @@ The default policy does not retry bad requests, authentication failures, guardra
 
 Streaming uses `LLMStreamFallbackMode.beforeFirstOutput` by default. If a provider fails before yielding text, tool calls, or a completion event, the router can continue with a fallback provider. Once output starts, the stream fails rather than silently splicing two providers into one partial response.
 
+Use `respondWithReceipt(to:)` when a call site needs a redacted diagnostic
+receipt for provider attempts, unsupported capability skips, fallback reasons,
+duration, and token usage:
+
+```swift
+let result = try await client.respondWithReceipt(to: request)
+let response = result.response
+let receipt = result.receipt
+```
+
+Existing `respond(to:)` call sites can emit the same receipts through
+`LLMRouter(runReceiptHandler:)`. Receipts intentionally store request shape and
+provider metadata, not prompt text, context text, tool arguments, or response
+text.
+
 ## Prompt/RAG Pipeline
 
 `LLMPipeline` combines:

@@ -239,6 +239,8 @@ let result = PromptEvaluator().evaluate(
 precondition(result.passed, result.failures.joined(separator: "\n"))
 ```
 
+`LLMRunReceipt` and `LocalDebugBundle` give apps a redacted way to inspect provider attempts, fallback reasons, duration, and token usage without storing prompt or response text.
+
 ## Provider Boundaries
 
 SwiftLLM is designed around explicit boundaries:

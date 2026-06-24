@@ -64,17 +64,20 @@ public struct LLMRouter: LLMClient {
   public var fallbacks: [AnyLLMClient]
   public var fallbackPolicy: LLMRouterFallbackPolicy
   public var primary: AnyLLMClient
+  public var runReceiptHandler: (@Sendable (LLMRunReceipt) -> Void)?
   public var streamFallbackMode: LLMStreamFallbackMode
 
   public init(
     primary: AnyLLMClient,
     fallbacks: [AnyLLMClient] = [],
     fallbackPolicy: LLMRouterFallbackPolicy = .retryable,
+    runReceiptHandler: (@Sendable (LLMRunReceipt) -> Void)? = nil,
     streamFallbackMode: LLMStreamFallbackMode = .beforeFirstOutput
   ) {
     self.fallbacks = fallbacks
     self.fallbackPolicy = fallbackPolicy
     self.primary = primary
+    self.runReceiptHandler = runReceiptHandler
     self.streamFallbackMode = streamFallbackMode
   }
 
@@ -101,8 +104,26 @@ public struct LLMRouter: LLMClient {
   }
 
   public func respond(to request: LLMRequest) async throws -> LLMResponse {
+    do {
+      let result = try await respondWithReceipt(to: request)
+      runReceiptHandler?(result.receipt)
+      return result.response
+    } catch let error as LLMRunReceiptError {
+      runReceiptHandler?(error.receipt)
+      throw error.underlyingError
+    }
+  }
+
+  public func respondWithReceipt(to request: LLMRequest) async throws -> LLMInstrumentedResponse {
     var lastError: (any Error)?
     let clients = configuredClients
+    let runID = UUID().uuidString
+    let runStartedAt = Date()
+    var receipt = LLMRunReceipt(
+      id: runID,
+      request: LLMRunRequestSummary(request: request),
+      startedAt: runStartedAt
+    )
 
     for (index, client) in clients.enumerated() {
       let remainingFallbackCount = clients.count - index - 1
@@ -112,30 +133,84 @@ public struct LLMRouter: LLMClient {
         attemptIndex: index,
         remainingFallbackCount: remainingFallbackCount
       )
-      let unsupportedError = unsupportedCapabilitiesError(
+      let unsupportedCapabilities = client.capabilities.unsupportedCapabilities(
         for: request,
-        client: client,
         streaming: false
       )
-      if let unsupportedError {
+      if !unsupportedCapabilities.isEmpty {
+        let unsupportedError = unsupportedCapabilitiesError(
+          for: request,
+          client: client,
+          streaming: false
+        ) ?? LLMClientError(reason: .unsupported)
         lastError = unsupportedError
+        let attemptedAt = Date()
+        receipt.attempts.append(
+          LLMRunAttemptReceipt(
+            id: "\(runID)-attempt-\(index)",
+            provider: LLMProviderReceiptSnapshot(metadata: client.metadata),
+            startedAt: attemptedAt,
+            completedAt: Date(),
+            status: .skippedUnsupportedCapabilities,
+            unsupportedCapabilities: unsupportedCapabilities.map(\.rawValue).sorted(),
+            error: LLMRunErrorReceipt(error: unsupportedError)
+          )
+        )
         guard remainingFallbackCount > 0,
               fallbackPolicy.shouldAttemptFallback(unsupportedError, context)
-        else { throw unsupportedError }
+        else {
+          receipt.completedAt = Date()
+          receipt.outcome = .failed
+          throw LLMRunReceiptError(underlyingError: unsupportedError, receipt: receipt)
+        }
         continue
       }
 
+      let attemptedAt = Date()
       do {
-        return try await client.respond(to: request)
+        let response = try await client.respond(to: request)
+        let completedAt = Date()
+        receipt.attempts.append(
+          LLMRunAttemptReceipt(
+            id: "\(runID)-attempt-\(index)",
+            provider: LLMProviderReceiptSnapshot(metadata: client.metadata),
+            startedAt: attemptedAt,
+            completedAt: completedAt,
+            status: .succeeded,
+            tokenUsage: response.tokenUsage.map(LLMTokenUsageReceipt.init)
+          )
+        )
+        receipt.completedAt = completedAt
+        receipt.finalProvider = LLMProviderReceiptSnapshot(metadata: response.metadata)
+        receipt.outcome = .succeeded
+        receipt.tokenUsage = response.tokenUsage.map(LLMTokenUsageReceipt.init)
+        return LLMInstrumentedResponse(response: response, receipt: receipt)
       } catch {
         lastError = error
+        receipt.attempts.append(
+          LLMRunAttemptReceipt(
+            id: "\(runID)-attempt-\(index)",
+            provider: LLMProviderReceiptSnapshot(metadata: client.metadata),
+            startedAt: attemptedAt,
+            completedAt: Date(),
+            status: .failed,
+            error: LLMRunErrorReceipt(error: error)
+          )
+        )
         guard remainingFallbackCount > 0,
               fallbackPolicy.shouldAttemptFallback(error, context)
-        else { throw error }
+        else {
+          receipt.completedAt = Date()
+          receipt.outcome = .failed
+          throw LLMRunReceiptError(underlyingError: error, receipt: receipt)
+        }
       }
     }
 
-    throw lastError ?? Self.noProvidersError
+    let error = lastError ?? Self.noProvidersError
+    receipt.completedAt = Date()
+    receipt.outcome = .failed
+    throw LLMRunReceiptError(underlyingError: error, receipt: receipt)
   }
 
   public func stream(to request: LLMRequest) -> AsyncThrowingStream<LLMStreamEvent, any Error> {

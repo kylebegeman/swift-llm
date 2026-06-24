@@ -149,17 +149,69 @@ struct EvaluationTests {
         )
       ]
     )
+    let receipt = LLMRunReceipt(
+      id: "run",
+      request: LLMRunRequestSummary(
+        contextItemCount: 1,
+        estimatedContextTokens: 32,
+        messageCount: 1,
+        promptID: "review",
+        promptVersion: "v1",
+        requiredCapabilities: ["instructions"],
+        responseFormat: "text",
+        toolCount: 0,
+        toolResultCount: 0
+      ),
+      startedAt: Date(timeIntervalSince1970: 0),
+      completedAt: Date(timeIntervalSince1970: 1),
+      outcome: .succeeded,
+      attempts: [
+        LLMRunAttemptReceipt(
+          id: "attempt",
+          provider: LLMProviderReceiptSnapshot(
+            modelIdentifier: "system",
+            privacyMode: "localOnly",
+            promptVersion: "v1",
+            providerDisplayName: "Apple Foundation Models",
+            providerKind: "appleFoundationModels"
+          ),
+          startedAt: Date(timeIntervalSince1970: 0),
+          completedAt: Date(timeIntervalSince1970: 1),
+          status: .succeeded,
+          tokenUsage: LLMTokenUsageReceipt(
+            estimatedInputTokens: 20,
+            estimatedOutputTokens: 8
+          )
+        ),
+      ],
+      finalProvider: LLMProviderReceiptSnapshot(
+        modelIdentifier: "system",
+        privacyMode: "localOnly",
+        promptVersion: "v1",
+        providerDisplayName: "Apple Foundation Models",
+        providerKind: "appleFoundationModels"
+      ),
+      tokenUsage: LLMTokenUsageReceipt(
+        estimatedInputTokens: 20,
+        estimatedOutputTokens: 8
+      )
+    )
+    let metrics = EvaluationRunMetrics(receipt: receipt)
     let bundle = LocalDebugBundle(
       id: "bundle",
       promptReports: [report],
       modelFallbackMatrix: fallbackMatrix,
+      runReceipts: [receipt],
       createdAt: Date(timeIntervalSince1970: 0)
     )
     let json = String(decoding: try bundle.jsonData(), as: UTF8.self)
 
     #expect(bundle.passed)
+    #expect(metrics.durationMilliseconds == 1_000)
+    #expect(metrics.estimatedInputTokens == 20)
     #expect(bundle.contentPolicy == .redacted)
     #expect(json.contains("\"contentPolicy\" : \"redacted\""))
     #expect(json.contains("\"providerKind\" : \"appleFoundationModels\""))
+    #expect(json.contains("\"runReceipts\""))
   }
 }

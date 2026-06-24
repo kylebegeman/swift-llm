@@ -162,6 +162,113 @@ struct RouterTests {
     #expect(events.textDeltas == ["partial"])
   }
 
+  @Test
+  func routerRespondWithReceiptRecordsFallbackAttemptsAndRedactsPayloads() async throws {
+    let primary = AnyLLMClient(metadata: Self.metadata(name: "Primary")) { _ in
+      throw LLMClientError(reason: .unavailable, statusCode: 503)
+    }
+    let fallbackMetadata = Self.metadata(name: "Fallback", providerKind: .testDouble)
+    let fallback = AnyLLMClient(metadata: fallbackMetadata) { _ in
+      LLMResponse(
+        text: "Fallback handled private transcript",
+        tokenUsage: LLMTokenUsage(
+          estimatedInputTokens: 12,
+          estimatedOutputTokens: 4,
+          measuredInputTokens: 10,
+          measuredOutputTokens: 3
+        ),
+        metadata: fallbackMetadata
+      )
+    }
+    let router = LLMRouter(primary: primary, fallbacks: [fallback])
+
+    let result = try await router.respondWithReceipt(
+      to: LLMRequest(
+        messages: [.user("private transcript")],
+        metadata: [
+          "promptID": "review",
+          "promptVersion": "v3",
+        ]
+      )
+    )
+    let json = String(decoding: try result.receipt.jsonData(), as: UTF8.self)
+
+    #expect(result.response.text == "Fallback handled private transcript")
+    #expect(result.receipt.outcome == .succeeded)
+    #expect(result.receipt.request.promptID == "review")
+    #expect(result.receipt.request.promptVersion == "v3")
+    #expect(result.receipt.attempts.map(\.status) == [.failed, .succeeded])
+    #expect(result.receipt.attempts.first?.error?.fallbackReason == "unavailable")
+    #expect(result.receipt.attempts.first?.error?.statusCode == 503)
+    #expect(result.receipt.finalProvider?.providerKind == "testDouble")
+    #expect(result.receipt.tokenUsage?.measuredOutputTokens == 3)
+    #expect(!json.contains("private transcript"))
+    #expect(!json.contains("Fallback handled private transcript"))
+  }
+
+  @Test
+  func routerReceiptRecordsUnsupportedCapabilitySkip() async throws {
+    let primary = AnyLLMClient(
+      metadata: Self.metadata(name: "Limited"),
+      capabilities: LLMClientCapabilities(supportedFeatures: [.instructions])
+    ) { _ in
+      Issue.record("Router should skip a provider that cannot run tools.")
+      return LLMResponse(text: "unexpected", metadata: Self.metadata(name: "Limited"))
+    }
+    let router = LLMRouter(
+      primary: primary,
+      fallbacks: [
+        .testDouble { _ in "Tool-capable fallback" },
+      ]
+    )
+
+    let result = try await router.respondWithReceipt(
+      to: LLMRequest(
+        messages: [.user("Use lookup.")],
+        tools: [
+          LLMToolDefinition(
+            name: "lookup",
+            description: "Lookup local data.",
+            inputSchema: ["type": "object"]
+          ),
+        ],
+        toolChoice: .required
+      )
+    )
+
+    #expect(result.response.text == "Tool-capable fallback")
+    #expect(result.receipt.attempts.first?.status == .skippedUnsupportedCapabilities)
+    #expect(result.receipt.attempts.first?.unsupportedCapabilities == ["tools"])
+    #expect(result.receipt.attempts.first?.error?.providerReason == "unsupported")
+    #expect(result.receipt.attempts.last?.status == .succeeded)
+  }
+
+  @Test
+  func routerRespondEmitsReceiptHandlerAndPreservesOriginalError() async {
+    let receiptBox = ReceiptBox()
+    let router = LLMRouter(
+      primary: AnyLLMClient(metadata: Self.metadata(name: "Primary")) { _ in
+        throw LLMClientError(reason: .badRequest)
+      },
+      runReceiptHandler: { receipt in
+        receiptBox.record(receipt)
+      }
+    )
+
+    do {
+      _ = try await router.respond(to: LLMRequest(messages: [.user("Bad request")]))
+      Issue.record("Expected the router to throw the original client error.")
+    } catch let error as LLMClientError {
+      #expect(error.reason == .badRequest)
+    } catch {
+      Issue.record("Expected LLMClientError, got \(error).")
+    }
+
+    let receipt = receiptBox.value()
+    #expect(receipt?.outcome == .failed)
+    #expect(receipt?.attempts.first?.error?.providerReason == "badRequest")
+  }
+
   // MARK: - Helpers
 
   private static func metadata(
@@ -174,5 +281,22 @@ struct RouterTests {
       providerDisplayName: name,
       providerKind: providerKind
     )
+  }
+}
+
+private final class ReceiptBox: @unchecked Sendable {
+  private let lock = NSLock()
+  private var receipt: LLMRunReceipt?
+
+  func record(_ receipt: LLMRunReceipt) {
+    lock.withLock {
+      self.receipt = receipt
+    }
+  }
+
+  func value() -> LLMRunReceipt? {
+    lock.withLock {
+      receipt
+    }
   }
 }

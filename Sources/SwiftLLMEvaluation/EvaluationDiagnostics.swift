@@ -202,6 +202,23 @@ public struct EvaluationRunMetrics: Codable, Equatable, Sendable {
       validationIssueCount: validationIssueCount
     )
   }
+
+  public init(
+    receipt: LLMRunReceipt,
+    inputChunkCount: Int? = nil,
+    retrievalSnippetCount: Int? = nil,
+    validationIssueCount: Int? = nil
+  ) {
+    self.init(
+      estimatedInputTokens: receipt.tokenUsage?.estimatedInputTokens,
+      estimatedOutputTokens: receipt.tokenUsage?.estimatedOutputTokens,
+      durationMilliseconds: receipt.durationMilliseconds,
+      inputChunkCount: inputChunkCount,
+      retrievalSnippetCount: retrievalSnippetCount,
+      fallbackReason: receipt.attempts.last(where: { $0.error?.fallbackReason != nil })?.error?.fallbackReason,
+      validationIssueCount: validationIssueCount
+    )
+  }
 }
 
 public struct PromptEvaluationResultRecord: Codable, Equatable, Sendable {
@@ -368,11 +385,13 @@ public struct LocalDebugBundle: Codable, Equatable, Identifiable, Sendable {
   public var modelFallbackMatrix: ModelFallbackMatrix?
   public var notes: String
   public var promptReports: [PromptVersionEvaluationReport]
+  public var runReceipts: [LLMRunReceipt]
 
   public init(
     id: String = UUID().uuidString,
     promptReports: [PromptVersionEvaluationReport],
     modelFallbackMatrix: ModelFallbackMatrix? = nil,
+    runReceipts: [LLMRunReceipt] = [],
     contentPolicy: LocalDebugBundleContentPolicy = .redacted,
     notes: String = "",
     createdAt: Date = Date()
@@ -383,10 +402,13 @@ public struct LocalDebugBundle: Codable, Equatable, Identifiable, Sendable {
     self.modelFallbackMatrix = modelFallbackMatrix
     self.notes = notes
     self.promptReports = promptReports
+    self.runReceipts = runReceipts
   }
 
   public var passed: Bool {
-    promptReports.allSatisfy(\.passed) && (modelFallbackMatrix?.failedCaseCount ?? 0) == 0
+    promptReports.allSatisfy(\.passed) &&
+      (modelFallbackMatrix?.failedCaseCount ?? 0) == 0 &&
+      runReceipts.allSatisfy { $0.outcome == .succeeded }
   }
 
   public func jsonData(prettyPrinted: Bool = true) throws -> Data {

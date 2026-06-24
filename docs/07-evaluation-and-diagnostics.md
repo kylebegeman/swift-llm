@@ -38,6 +38,7 @@ The first `SwiftLLMEvaluation` target now supports:
 - prompt-version reports through `PromptVersionEvaluationReport`
 - prompt-version matrices through `PromptVersionEvaluationMatrix`
 - model availability/fallback summaries through `ModelFallbackMatrix`
+- redacted provider run receipts through `LLMRunReceipt`
 - token/latency/retrieval metrics through `EvaluationRunMetrics`
 - local JSON debug bundles through `LocalDebugBundle`
 
@@ -127,6 +128,28 @@ Useful metadata:
 - validation failures
 
 `EvaluationRunMetrics` covers the first version of this metadata shape. It intentionally stores counts, durations, and identifiers rather than raw private content.
+
+`LLMRunReceipt` is the package-level receipt for one generation request. A
+receipt records:
+
+- prompt ID and prompt version from request metadata
+- request shape, including message counts, tool counts, context item counts, and required capabilities
+- provider attempts, including unsupported capability skips and retryable failures
+- final provider metadata
+- token usage when the provider reports it
+- duration fields for the run and each attempt
+
+Receipts are redacted by construction. They do not include user prompts, context
+item text, model response text, tool arguments, API keys, or user identifiers.
+Use `LLMRouter.respondWithReceipt(to:)` when call sites need the receipt
+alongside a response. Use `LLMRouter(runReceiptHandler:)` when existing
+`respond(to:)` call sites should emit receipts without changing their return
+type. Failed `respondWithReceipt(to:)` calls throw `LLMRunReceiptError`, which
+contains both the underlying error and the redacted receipt.
+
+`EvaluationRunMetrics` can be initialized from a receipt when evaluation reports
+need the same token and duration fields. `LocalDebugBundle` can also include run
+receipts, still under the default redacted content policy.
 
 Do not store by default:
 
